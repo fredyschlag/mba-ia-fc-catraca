@@ -23,3 +23,11 @@ class ValidacaoError(ErroDeDominio):
 
 class EmailJaCadastrado(ValidacaoError):
     """O e-mail informado já pertence a outra conta."""
+
+
+class EventoNaoEncontrado(ErroDeDominio):
+    """O evento não existe ou é de outro organizador (as views respondem 404)."""
+
+
+class EventoIndisponivel(ErroDeDominio):
+    """O evento não existe ou não está à venda: rascunho ou cancelado (R02)."""
