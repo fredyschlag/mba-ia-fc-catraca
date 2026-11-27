@@ -1,0 +1,13 @@
+# Plano — F07 Cancelamento
+
+Spec: [spec.md](spec.md) · Contrato: [contrato.md](contrato.md). Branch `feat/F07-cancelamento`, porta 8000.
+
+Cada etapa termina com `./scripts/gates.sh` em código 0, entra com os seus testes e vira um commit com push. Comandos Python só por `./scripts/dev.sh`. Sem migration nova (o valor `cancelado` já existe desde a F02).
+
+| # | Etapa | Arquivos | Testes que entram junto |
+|---|---|---|---|
+| 1 | Exceções, `cancelar_evento`, bloqueio de edição e publicação, `garantir_editavel`, propriedades `pode_ser_*` | `dominio/excecoes.py`, `dominio/servicos/cancelamento.py`, `dominio/servicos/eventos.py`, `dominio/models.py`, `dominio/tests/test_eventos.py` (ajuste do teste de publicar) | `dominio/tests/test_cancelamento.py`: `test_cancelar_publicado_estorna_confirmados_e_cancela_pendentes`, `test_cancelar_mantem_check_in_e_recusados`, `test_cancelar_de_novo_nao_muda_nada`, `test_cancelar_rascunho_e_rejeitado`, `test_cancelar_evento_de_outro_organizador`, `test_evento_cancelado_nao_edita_nem_publica`, `test_evento_cancelado_sai_da_venda`, `test_vagas_de_evento_cancelado_sao_zero`, `test_resposta_tardia_nao_muda_cancelado_nem_estornado`, `test_propriedades_de_estado_do_evento` |
+| 2 | Corrida gateway × cancelamento | `dominio/tests/test_cancelamento_concorrencia.py` | `test_corrida_aprovacao_e_cancelamento_nunca_deixa_confirmado` (`REPETICOES = 50`, `threading.Barrier(2)`, par retorno × status coerente), `test_aprovacao_que_espera_o_cancelamento_nao_muda_nada` e `test_cancelamento_que_espera_a_aprovacao_estorna` (uma operação segura a transação aberta e a outra espera a trava) |
+| 3 | Telas: bloco `#evento-cancelar`, `POST /cancelar/`, gestão de cancelado, editar/publicar 409 | `web/views/cancelamento.py`, `web/views/organizador.py`, `web/urls.py`, `web/templates/web/organizador/gestao/_cancelar.html`, `_acoes.html`, `web/templates/web/organizador/acao_rejeitada.html` | `web/tests/test_cancelamento.py`: `test_bloco_cancelar_so_em_publicado_com_confirmacao`, `test_cancelar_pela_gestao`, `test_cancelar_rascunho_pela_tela_responde_409`, `test_outro_organizador_nao_cancela`, `test_visitante_e_participante_nao_cancelam`, `test_gestao_de_cancelado_sem_editar_nem_publicar`, `test_editar_e_publicar_cancelado_respondem_409`, `test_lista_do_organizador_mostra_cancelado` |
+| 4 | Verificação no ambiente | — | do zero; todos os itens do [contrato](contrato.md), inclusive os cartões lentos e o passo 12–14 do Fluxo; `./scripts/down.sh` |
+| 5 | Pedir avaliação | `estado.json` | F07 em `em_avaliacao`, commit, push, árvore limpa; avaliação por subagente novo |
