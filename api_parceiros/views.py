@@ -9,7 +9,9 @@ from functools import wraps
 from django.views.decorators.csrf import csrf_exempt
 
 from api_parceiros.auth import exigir_chave_parceiro
-from api_parceiros.respostas import erro
+from api_parceiros.respostas import erro, responder
+from api_parceiros.serializadores import evento_para_api
+from dominio.servicos.eventos import eventos_a_venda
 
 
 def so_metodo(permitido: str):
@@ -33,7 +35,8 @@ def so_metodo(permitido: str):
 @exigir_chave_parceiro
 @so_metodo("GET")
 def eventos(request):
-    return erro("not_implemented", 501)
+    """Eventos à venda (publicados), na ordem do início; `availableSeats` conforme R05."""
+    return responder([evento_para_api(evento) for evento in eventos_a_venda()])
 
 
 @csrf_exempt
