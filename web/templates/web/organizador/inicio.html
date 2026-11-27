@@ -3,6 +3,22 @@
 {% block conteudo %}
   <section id="meus-eventos">
     <h2>Meus eventos</h2>
-    <p>Você ainda não tem eventos.</p>
+    <p><a href="/organizador/eventos/novo/">Novo evento</a></p>
+    {% if eventos %}
+      <table>
+        <thead><tr><th>Evento</th><th>Início</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for evento in eventos %}
+            <tr class="evento" data-evento="{{ evento.id_publico }}" data-status="{{ evento.status }}">
+              <td><a href="/organizador/eventos/{{ evento.id_publico }}/">{{ evento.nome }}</a></td>
+              <td>{{ evento.inicio|date:"d/m/Y H:i" }}</td>
+              <td class="status">{{ evento.get_status_display }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Você ainda não tem eventos.</p>
+    {% endif %}
   </section>
 {% endblock %}

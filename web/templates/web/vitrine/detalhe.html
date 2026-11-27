@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load catraca %}
+{% block titulo %}{{ evento.nome }} — Catraca{% endblock %}
+{% block conteudo %}
+  <section id="evento-detalhe">
+    <h2>{{ evento.nome }}</h2>
+    <dl>
+      <dt>Início</dt><dd data-campo="inicio">{{ evento.inicio|date:"d/m/Y H:i" }}</dd>
+      <dt>Local</dt><dd data-campo="local">{{ evento.local }}</dd>
+      <dt>Preço</dt><dd data-campo="preco">{{ evento.preco_centavos|reais }}</dd>
+    </dl>
+  </section>
+  {% include "web/vitrine/_compra.html" %}
+{% endblock %}

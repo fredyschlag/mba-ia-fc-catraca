@@ -9,7 +9,7 @@ def test_saude_responde_200(client):
     assert resposta.json() == {"status": "ok"}
 
 
-def test_inicio_provisorio_responde_200(client):
+def test_vitrine_responde_200(client):
     resposta = client.get("/")
     assert resposta.status_code == 200
     assert b'id="vitrine"' in resposta.content

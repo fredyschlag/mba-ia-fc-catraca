@@ -1,6 +1,6 @@
-"""Views gerais da web: healthcheck, página inicial e falha de CSRF.
+"""Views gerais da web: healthcheck e falha de CSRF.
 
-As views de cada assunto ficam em módulos próprios deste pacote (contas, organizador…).
+As views de cada assunto ficam em módulos próprios deste pacote (contas, vitrine, organizador…).
 """
 
 from django.db import connection
@@ -15,12 +15,6 @@ def saude(request):
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1")
     return JsonResponse({"status": "ok"})
-
-
-@require_GET
-def inicio(request):
-    """Página inicial provisória; a vitrine chega na F02."""
-    return render(request, "web/inicio.html")
 
 
 def falha_csrf(request, reason=""):
