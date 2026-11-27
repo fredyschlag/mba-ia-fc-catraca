@@ -31,3 +31,25 @@ class EventoNaoEncontrado(ErroDeDominio):
 
 class EventoIndisponivel(ErroDeDominio):
     """O evento não existe ou não está à venda: rascunho ou cancelado (R02)."""
+
+
+MSG_CARTAO_INVALIDO = "O número do cartão precisa ter 16 dígitos."
+MSG_INGRESSOS_ESGOTADOS = "Ingressos esgotados"
+
+
+class CartaoInvalido(ValidacaoError):
+    """Número de cartão fora de 16 dígitos; a compra é rejeitada antes de criar o ingresso."""
+
+    def __init__(self):
+        super().__init__({"cartao": [MSG_CARTAO_INVALIDO]})
+
+
+class IngressosEsgotados(ErroDeDominio):
+    """Sem vaga disponível no evento (R07)."""
+
+    def __init__(self):
+        super().__init__(MSG_INGRESSOS_ESGOTADOS)
+
+
+class IngressoNaoEncontrado(ErroDeDominio):
+    """Nenhum ingresso com esse id público."""
