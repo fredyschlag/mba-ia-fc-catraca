@@ -329,7 +329,7 @@ grep -c "^def exigir_chave_parceiro" api_parceiros/auth.py
 grep -cE "^def (evento_para_api|ingresso_para_api)\(" api_parceiros/serializadores.py
 ```
 
-Esperado: `0` (nenhuma gravação direta fora dos testes; com ou sem espaços à esquerda); exatamente 4 linhas: `comprar_ingresso`, `consultar_ingresso`, `eventos_a_venda`, `vagas_disponiveis`; `1` (comparação da chave em tempo constante).
+Esperado, na ordem dos comandos: `0` (nenhuma gravação direta fora dos testes; com ou sem espaços à esquerda); exatamente 4 linhas: `comprar_ingresso`, `consultar_ingresso`, `eventos_a_venda`, `vagas_disponiveis`; `1` (comparação da chave em tempo constante); três linhas `0` (views, serializadores e auth não consultam o ORM direto); `1` (o decorador `exigir_chave_parceiro` existe com esse nome); `2` (os serializadores `evento_para_api` e `ingresso_para_api` existem com esses nomes).
 
 ### C-13 — Testes automatizados da feature
 
