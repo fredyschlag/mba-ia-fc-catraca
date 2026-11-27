@@ -17,7 +17,7 @@
     {"id": "F02", "nome": "Eventos e vitrine", "wave": "W2", "status": "concluida", "branch": "feat/F02-eventos-vitrine", "pr": 3, "relatorio": "docs/features/F02-eventos-vitrine/avaliacoes/2026-11-27T1412-3bef022.md"},
     {"id": "F03", "nome": "Compra, lotação e gateway", "wave": "W3", "status": "concluida", "branch": "feat/F03-compra-lotacao-gateway", "pr": 4, "relatorio": "docs/features/F03-compra-lotacao-gateway/avaliacoes/2026-11-27T1428-006c083.md"},
     {"id": "F04", "nome": "API de parceiros", "wave": "W4", "status": "reprovada", "branch": "feat/F04-api-parceiros", "pr": null, "relatorio": "docs/features/F04-api-parceiros/avaliacoes/2026-11-27T1812-c3d2e61.md"},
-    {"id": "F05", "nome": "Check-in", "wave": "W4", "status": "pendente", "branch": null, "pr": null, "relatorio": null},
+    {"id": "F05", "nome": "Check-in", "wave": "W4", "status": "concluida", "branch": "feat/F05-check-in", "pr": 5, "relatorio": "docs/features/F05-check-in/avaliacoes/2026-11-27T1456-ed3b8b7.md"},
     {"id": "F06", "nome": "Painel", "wave": "W5", "status": "pendente", "branch": null, "pr": null, "relatorio": null},
     {"id": "F07", "nome": "Cancelamento", "wave": "W6", "status": "pendente", "branch": null, "pr": null, "relatorio": null}
   ]
