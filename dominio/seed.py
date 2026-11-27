@@ -22,14 +22,21 @@ CONTAS_DEV = [
 
 @transaction.atomic
 def executar_seed():
-    """Cria ou atualiza as contas de desenvolvimento. Idempotente: a senha é redefinida."""
+    """Cria ou atualiza as contas de desenvolvimento. Idempotente.
+
+    Nome, papel e `is_active` sempre voltam aos valores de CONTAS_DEV. A senha só é gravada
+    quando a conta acabou de ser criada ou quando SENHA_DEV não confere mais: se já confere,
+    o hash fica como está, e as sessões abertas dessas contas continuam válidas (o Django
+    invalida a sessão quando o hash da senha muda).
+    """
     resultado = []
     for conta in CONTAS_DEV:
         usuario, criado = Usuario.objects.update_or_create(
             email=conta["email"],
             defaults={"nome": conta["nome"], "papel": conta["papel"], "is_active": True},
         )
-        usuario.set_password(SENHA_DEV)
-        usuario.save(update_fields=["password"])
+        if criado or not usuario.check_password(SENHA_DEV):
+            usuario.set_password(SENHA_DEV)
+            usuario.save(update_fields=["password"])
         resultado.append((usuario, criado))
     return resultado
