@@ -1,0 +1,10 @@
+{% load catraca %}
+<h3>Painel</h3>
+<dl class="painel">
+  <dt>Confirmados</dt><dd data-metrica="confirmados">{{ painel.confirmados }}</dd>
+  <dt>Pendentes</dt><dd data-metrica="pendentes">{{ painel.pendentes }}</dd>
+  <dt>Check-ins</dt><dd data-metrica="check-ins">{{ painel.check_ins }}</dd>
+  <dt>Vagas disponíveis</dt><dd data-metrica="vagas-disponiveis">{{ painel.vagas_disponiveis }}</dd>
+  <dt>Receita</dt><dd data-metrica="receita">{{ painel.receita_centavos|reais }}</dd>
+  <dt>Estornados</dt><dd data-metrica="estornados">{{ painel.estornados }}</dd>
+</dl>

@@ -49,10 +49,21 @@ A subida termina quando o produto está saudável e imprime os endereços. Para 
 | PRD (features, Provides/Consumes, grafo, waves, critérios, matrizes) | [docs/prd.md](docs/prd.md) |
 | Critérios de harness da W0 (H-01…H-08) | [docs/prd.md](docs/prd.md), seção 6.0 |
 | Modelos de contrato e de relatório de avaliação | [docs/modelos/](docs/modelos/) |
-| Pasta de cada feature (spec, plano, contrato, avaliações) | `docs/features/<ID>-<slug>/` — a preencher a partir da F01 |
+| Pasta de cada feature (spec, plano, contrato, avaliações) | `docs/features/<ID>-<slug>/`: [F01](docs/features/F01-contas-acesso/), [F02](docs/features/F02-eventos-vitrine/), [F03](docs/features/F03-compra-lotacao-gateway/), [F04](docs/features/F04-api-parceiros/), [F05](docs/features/F05-check-in/), [F06](docs/features/F06-painel/), [F07](docs/features/F07-cancelamento/); relatórios em `avaliacoes/` de cada uma |
 | Estado do projeto | [estado.json](estado.json) |
 | Porta de entrada dos agentes | [AGENTS.md](AGENTS.md) (o [CLAUDE.md](CLAUDE.md) aponta para ele) |
-| PRs da wave paralela (W4: F04 ∥ F05) | a preencher na F04/F05 |
+| PRs da wave paralela (W4: F04 ∥ F05) | [F05: Check-in (#5)](https://github.com/fredyschlag/mba-ia-fc-catraca/pull/5) e [F04: API de parceiros (#6)](https://github.com/fredyschlag/mba-ia-fc-catraca/pull/6); como se intercalaram, ver "Paralelismo da W4" abaixo |
+
+## Paralelismo da W4
+
+F04 e F05 foram implementadas ao mesmo tempo, cada uma por um subagente na sua worktree (`../catraca-F04`, porta 8001, branch `feat/F04-api-parceiros`; `../catraca-F05`, porta 8002, branch `feat/F05-check-in`), com commit e push a cada etapa. Horários dos commits de cada PR (America/Sao_Paulo, 2026-11-27, `gh pr view <n> --json commits`):
+
+| PR | Primeiro commit | Último commit |
+|---|---|---|
+| [#5 F05 Check-in](https://github.com/fredyschlag/mba-ia-fc-catraca/pull/5) | `1ed58e9` 14:39:39 | `7b810bc` 18:11:58 |
+| [#6 F04 API de parceiros](https://github.com/fredyschlag/mba-ia-fc-catraca/pull/6) | `f9b7751` 14:39:43 | `a7f19fa` 18:24:03 |
+
+O primeiro commit de cada PR é anterior ao último commit do outro, e as etapas de implementação se intercalaram entre 14:46 e 14:55 (F05: 14:47:59, 14:49:19, 14:50:55, 14:52:51; F04: 14:48:14, 14:49:07, 14:50:33, 14:51:21, 14:53:08, 14:55:31). O #5 entrou primeiro; o #6 recebeu a main na própria branch e resolveu o único conflito, no `estado.json` (linhas vizinhas da F04 e da F05), sem mudar código; depois do merge os gates e o contrato da F04 rodaram de novo e a reavaliação foi feita sobre o código integrado.
 
 ## Decisões
 
