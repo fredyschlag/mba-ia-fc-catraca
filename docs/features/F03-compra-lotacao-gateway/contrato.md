@@ -231,7 +231,7 @@ Esperado: um id `evt_…`; duas compras com status 302 e `location: /meus-ingres
 
 ```bash
 ./scripts/gates.sh -v dominio/tests/test_concorrencia.py; echo "código: $?"
-grep -cE 'COMPRAS_SIMULTANEAS = 30|LOTACAO = 5|RODADAS = 10|threading\.Barrier' dominio/tests/test_concorrencia.py
+grep -cE 'COMPRAS_SIMULTANEAS = 30|LOTACAO = 5|RODADAS = 10|threading\.Barrier\(COMPRAS_SIMULTANEAS\)' dominio/tests/test_concorrencia.py
 ```
 
 Esperado: "código: 0" com `test_compras_simultaneas_nunca_passam_da_lotacao PASSED` (30 threads liberadas juntas por uma barreira, cada uma com a sua conexão, num evento de lotação 5, repetido em 10 eventos novos: exatamente 5 ingressos e 25 `IngressosEsgotados` em cada um) e `test_editar_lotacao_concorrente_com_compras PASSED` (edição de lotação para baixo disputando com compras simultâneas; as vagas ocupadas nunca passam da lotação gravada); `4` (as quatro constantes do teste estão no arquivo).
@@ -286,7 +286,7 @@ Esperado: status 200; status 302 e `location: /contas/entrar/?next=/meus-ingress
 ### C-15 — (F03-CA14) Worker em container próprio, resiliente a derrubar e subir
 
 ```bash
-docker compose ps --format '{{.Service}} {{.State}}' | grep -E '^(web|gateway) '
+docker compose ps --format '{{.Service}} {{.State}}' | grep -E '^(web|gateway) ' | sort
 docker compose stop gateway
 comprar $D/n "$E2" 4000000000000001; corpo $D/n /meus-ingressos/ > $D/mi5.html
 C5=$(codigos $D/mi5.html | head -n 1); guardar C5 "$C5"
@@ -298,7 +298,7 @@ sleep 3
 sql "select i.status, c.processada_em is null from dominio_ingresso i join dominio_cobrancagateway c on c.ingresso_id = i.id where i.codigo = '$C5'"
 ```
 
-Esperado: duas linhas, `web running` e `gateway running` (serviços separados); compra com status 302; `pending|t|t` (vencida e não processada com o worker parado); "Catraca encerrada (volume do banco mantido)."; `up: 0`; `confirmed|f` (processada depois da subida).
+Esperado: duas linhas, nesta ordem, `gateway running` e `web running` (serviços separados); compra com status 302; `pending|t|t` (vencida e não processada com o worker parado); "Catraca encerrada (volume do banco mantido)."; `up: 0`; `confirmed|f` (processada depois da subida).
 
 ### C-16 — Testes automatizados da feature
 
