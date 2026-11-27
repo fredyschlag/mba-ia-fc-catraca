@@ -5,7 +5,12 @@ import pytest
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from dominio.excecoes import EventoIndisponivel, EventoNaoEncontrado, ValidacaoError
+from dominio.excecoes import (
+    EventoCancelado,
+    EventoIndisponivel,
+    EventoNaoEncontrado,
+    ValidacaoError,
+)
 from dominio.models import Evento
 from dominio.servicos import eventos as srv
 from dominio.tests.conftest import dados_evento, futuro
@@ -163,7 +168,8 @@ def test_publicar_evento_so_a_partir_de_rascunho_e_idempotente(organizador):
     assert srv.publicar_evento(organizador, evento.id_publico).status == Evento.Status.PUBLICADO
     assert srv.publicar_evento(organizador, evento.id_publico).status == Evento.Status.PUBLICADO
     Evento.objects.filter(pk=evento.pk).update(status=Evento.Status.CANCELADO)
-    assert srv.publicar_evento(organizador, evento.id_publico).status == Evento.Status.CANCELADO
+    with pytest.raises(EventoCancelado):
+        srv.publicar_evento(organizador, evento.id_publico)
     assert Evento.objects.count() == 1
 
 

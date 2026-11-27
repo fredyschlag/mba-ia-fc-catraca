@@ -53,3 +53,21 @@ class IngressosEsgotados(ErroDeDominio):
 
 class IngressoNaoEncontrado(ErroDeDominio):
     """Nenhum ingresso com esse id público."""
+
+
+MSG_EVENTO_CANCELADO = "Evento cancelado não pode ser alterado."
+MSG_CANCELAMENTO_NAO_PERMITIDO = "Só evento publicado pode ser cancelado."
+
+
+class EventoCancelado(ErroDeDominio):
+    """Evento cancelado não pode ser editado nem publicado (R11)."""
+
+    def __init__(self):
+        super().__init__(MSG_EVENTO_CANCELADO)
+
+
+class CancelamentoNaoPermitido(ErroDeDominio):
+    """Só evento publicado pode ser cancelado (rascunho não)."""
+
+    def __init__(self):
+        super().__init__(MSG_CANCELAMENTO_NAO_PERMITIDO)
