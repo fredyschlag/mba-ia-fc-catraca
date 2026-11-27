@@ -75,7 +75,7 @@ ver $D/v /organizador/eventos/novo/
 entrar $D/p participante@catraca.test
 ver $D/p /organizador/eventos/novo/
 postar $D/p /organizador/eventos/novo/ "nome=Invasão" "inicio=2027-06-15T21:00" "local=Bar" "lotacao=2" "preco=100,00"
-grep -cF "Acesso negado" $D/p.html
+grep -cF "<h2>Acesso negado</h2>" $D/p.html
 eventos
 ```
 
