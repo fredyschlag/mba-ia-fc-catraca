@@ -103,7 +103,7 @@ def test_api_isenta_de_csrf_e_sem_cookie(organizador):
         content_type="application/json",
         HTTP_X_API_KEY=CHAVE,
     )
-    assert compra.status_code not in (401, 403)
+    assert compra.status_code == 202
     for resposta in (compra, client.get(URL_EVENTOS, HTTP_X_API_KEY=CHAVE)):
         assert not resposta.cookies
         assert "Set-Cookie" not in resposta
