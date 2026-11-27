@@ -1,2 +1,20 @@
-{# Slot da compra (F03): formulário de cartão ou "Ingressos esgotados". #}
-<section id="compra"></section>
+<section id="compra">
+  <p>Vagas disponíveis: <span data-campo="vagas-disponiveis">{{ vagas_disponiveis }}</span></p>
+  {% if erro_compra %}<p class="erro" id="erro-compra">{{ erro_compra }}</p>{% endif %}
+  {% if vagas_disponiveis > 0 %}
+    {% if user.is_authenticated and user.eh_participante %}
+      <form id="form-compra" method="post" action="/eventos/{{ evento.id_publico }}/comprar/" novalidate>
+        {% csrf_token %}
+        <label for="id_cartao">Número do cartão (16 dígitos)</label>
+        <input id="id_cartao" name="cartao" inputmode="numeric" autocomplete="cc-number">
+        <button type="submit">Comprar</button>
+      </form>
+    {% elif user.is_authenticated %}
+      <p>Compras são feitas com uma conta de participante.</p>
+    {% else %}
+      <p><a href="/contas/entrar/?next=/eventos/{{ evento.id_publico }}/">Entre para comprar</a></p>
+    {% endif %}
+  {% else %}
+    <p id="esgotado">Ingressos esgotados</p>
+  {% endif %}
+</section>

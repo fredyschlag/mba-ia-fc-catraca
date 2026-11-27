@@ -1,7 +1,7 @@
 from django.urls import path
 
 from web import views
-from web.views import contas, organizador, vitrine
+from web.views import compras, contas, organizador, vitrine
 
 # Toda rota sob organizador/ usa a guarda organizador_requerido (ver web/acesso.py).
 urlpatterns = [
@@ -23,5 +23,7 @@ urlpatterns = [
         name="organizador_evento_publicar",
     ),
     path("eventos/<str:evento_id>/", vitrine.detalhe, name="vitrine_detalhe"),
+    path("eventos/<str:evento_id>/comprar/", compras.comprar, name="vitrine_comprar"),
+    path("meus-ingressos/", compras.meus_ingressos, name="meus_ingressos"),
     path("", vitrine.vitrine, name="vitrine"),
 ]

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titulo %}Meus ingressos — Catraca{% endblock %}
+{% block conteudo %}
+  <h2>Meus ingressos</h2>
+  {% if ingressos %}
+    <table id="meus-ingressos">
+      <thead><tr><th>Evento</th><th>Status</th><th>Código</th></tr></thead>
+      <tbody>
+        {% for ingresso in ingressos %}
+          <tr data-ingresso="{{ ingresso.id_publico }}" data-status="{{ ingresso.status }}"><td data-campo="evento">{{ ingresso.evento.nome }}</td><td data-campo="status">{{ ingresso.get_status_display }}</td><td data-campo="codigo">{{ ingresso.codigo }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <table id="meus-ingressos"></table>
+    <p>Você ainda não tem ingressos.</p>
+  {% endif %}
+{% endblock %}
