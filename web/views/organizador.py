@@ -13,7 +13,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from dominio.excecoes import EventoNaoEncontrado, ValidacaoError
+from dominio.excecoes import EventoCancelado, EventoNaoEncontrado, ValidacaoError
 from dominio.servicos import eventos as servico
 from web.acesso import organizador_requerido
 from web.forms import EventoForm
@@ -82,6 +82,10 @@ def gestao(request, evento_id):
 @require_http_methods(["GET", "POST"])
 def editar(request, evento_id):
     evento = _evento_ou_404(request, evento_id)
+    try:
+        servico.garantir_editavel(request.user, evento_id)
+    except EventoCancelado as erro:
+        return acao_rejeitada(request, evento, str(erro))
     if request.method == "GET":
         form = EventoForm(initial=_valores_iniciais(evento))
         return render(request, "web/organizador/form_evento.html", {"form": form, "evento": evento})
@@ -91,6 +95,8 @@ def editar(request, evento_id):
         servico.editar_evento(request.user, evento_id, form.cleaned_data)
     except EventoNaoEncontrado as erro:
         raise Http404 from erro
+    except EventoCancelado as erro:
+        return acao_rejeitada(request, evento, str(erro))
     except ValidacaoError as erro:
         contexto = {"form": _form_com_erros(form, erro), "evento": evento}
         return render(request, "web/organizador/form_evento.html", contexto)
@@ -105,5 +111,13 @@ def publicar(request, evento_id):
         evento = servico.publicar_evento(request.user, evento_id)
     except EventoNaoEncontrado as erro:
         raise Http404 from erro
+    except EventoCancelado as erro:
+        return acao_rejeitada(request, _evento_ou_404(request, evento_id), str(erro))
     messages.success(request, "Evento publicado.")
     return _gestao(evento)
+
+
+def acao_rejeitada(request, evento, mensagem):
+    """409 com a mensagem do domínio (evento cancelado, ou cancelamento de rascunho)."""
+    contexto = {"evento": evento, "mensagem": mensagem}
+    return render(request, "web/organizador/acao_rejeitada.html", contexto, status=409)

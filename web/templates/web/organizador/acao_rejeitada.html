@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block titulo %}Ação não permitida — Catraca{% endblock %}
+{% block conteudo %}
+  <h2>Ação não permitida</h2>
+  <p class="erro" id="acao-rejeitada">{{ mensagem }}</p>
+  <p><a href="/organizador/eventos/{{ evento.id_publico }}/">Voltar para a gestão</a></p>
+{% endblock %}
