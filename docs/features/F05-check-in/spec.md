@@ -80,8 +80,8 @@ Rota em `web/urls.py`, nome `organizador_check_in`, logo depois de `publicar`. O
 
 ## 4. Testes
 
-- `dominio/tests/test_checkin.py`: as cinco mensagens exatas e a ordem do enum; cada situação de R10 (inexistente; de outro evento do mesmo organizador e de outro organizador, confirmado; de outro evento num evento cancelado; evento cancelado com o ingresso em cada um dos cinco status, com e sem check-in; `pending` e `declined` em evento publicado; já utilizado; entrada liberada com `check_in_em` gravado e status `confirmed`); normalização; código mal formado (vazio, `None`, longo, com `\x00`); evento de outro organizador e inexistente → `EventoNaoEncontrado` sem efeito; o SQL do check-in trava o evento e depois o ingresso (`FOR UPDATE`, nesta ordem); resultados rejeitados não escrevem.
-- `dominio/tests/test_checkin_concorrencia.py` (F05-CA07): `django_db(transaction=True)`; 10 threads liberadas juntas por `threading.Barrier(10)`, cada uma com a sua conexão (fechada no fim), fazem o check-in do mesmo código confirmado → exatamente 1 `ENTRADA_LIBERADA` e 9 `JA_UTILIZADO`; repetido em 10 ingressos novos.
+- `dominio/tests/test_checkin.py`: as cinco mensagens exatas e a ordem do enum; cada situação de R10 (inexistente; de outro evento do mesmo organizador e de outro organizador, confirmado; de outro evento num evento cancelado; evento cancelado com o ingresso em cada um dos cinco status, com e sem check-in; em evento publicado, cada um dos quatro status não confirmados (`pending`, `declined`, `cancelled`, `refunded`), com e sem `check_in_em`, sempre "Ingresso não confirmado" (item 3 antes do 4); já utilizado; entrada liberada com `check_in_em` gravado e status `confirmed`); normalização; código mal formado (vazio, `None`, longo, com `\x00`); evento em rascunho: todo código (inexistente ou de outro evento) é "Ingresso inválido para este evento" (`test_evento_em_rascunho_so_tem_codigos_invalidos`); evento de outro organizador e inexistente → `EventoNaoEncontrado` sem efeito; o SQL do check-in trava o evento e depois o ingresso (`FOR UPDATE`, nesta ordem); resultados rejeitados não escrevem.
+- `dominio/tests/test_checkin_concorrencia.py` (F05-CA07), `test_check_ins_simultaneos_liberam_uma_unica_vez`: `django_db(transaction=True)`; constantes `CHECK_INS_SIMULTANEOS = 10` e `RODADAS = 10`; 10 threads liberadas juntas por `threading.Barrier(CHECK_INS_SIMULTANEOS)`, cada uma com a sua conexão (fechada no fim com `connection.close()`), fazem o check-in do mesmo código confirmado → exatamente 1 `ENTRADA_LIBERADA` e 9 `JA_UTILIZADO`; repetido em `RODADAS` = 10 ingressos novos.
 - `web/tests/test_checkin.py`: bloco na gestão do dono (formulário, campo, CSRF, sem mensagem no `GET`); cada mensagem pela tela; normalização pela tela; 404 para outro organizador sem efeito e sem mensagem; visitante 302 e participante 403 sem efeito; `GET` 405; evento cancelado mantém o campo e responde "Evento cancelado"; a resposta do `POST` é a gestão inteira.
 
 ## 5. Critérios cross desta feature
@@ -91,6 +91,6 @@ Rota em `web/urls.py`, nome `organizador_check_in`, logo depois de `publicar`. O
 
 ## 6. Decisões menores
 
-- Check-in de evento em rascunho segue a lista: como rascunho não vende, todo código dá "Ingresso inválido para este evento".
-- O código digitado não é ecoado na resposta; só a mensagem aparece (no 404, nem ela).
+- Check-in de evento em rascunho segue a lista: como rascunho não vende, todo código dá "Ingresso inválido para este evento" (contrato C-07 e `test_evento_em_rascunho_so_tem_codigos_invalidos`).
+- O código digitado não é ecoado na resposta e o campo volta sem `value`; só a mensagem aparece (no 404, nem ela). Conferido no contrato (C-04) e em `test_resposta_do_check_in_e_a_gestao_inteira`.
 - Nenhuma mudança de modelo nem migration: `check_in_em` já existe desde a F03.

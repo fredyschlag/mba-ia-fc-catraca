@@ -96,6 +96,7 @@ Esperado: "código: 0"; ruff sem erros, `manage.py check` sem problemas, "No cha
 ```bash
 entrar $D/a org.a@catraca.test
 E1=$(novo_evento $D/a "Check-in Principal" "2027-08-10T21:00" 10 "100,00"); guardar E1 "$E1"; echo "$E1"
+echo "$E1" | grep -cE '^evt_[a-z0-9]{8}$'
 corpo $D/a /organizador/eventos/$E1/ > $D/g1.html
 sed -n '/<section id="check-in">/,/<\/section>/p' $D/g1.html > $D/bloco.html
 grep -c '<section id="check-in">' $D/g1.html
@@ -111,7 +112,7 @@ checkin $D/p "$E1" ZZZZZZZZ
 ```
 
 Esperado:
-- login de A: status 302 e `location: /organizador/`; um id `evt_…`;
+- login de A: status 302 e `location: /organizador/`; um id `evt_…`; `1` (o id tem o formato `evt_` + 8 caracteres de `[a-z0-9]`);
 - `1`; `1` (formulário com `POST` para a URL de check-in do evento); `1`; `1` (campo `codigo` e token CSRF dentro do bloco); `0` (sem mensagem antes de um envio);
 - `GET` do organizador na URL de check-in: status 405;
 - visitante: `GET` com status 302 e `location: /contas/entrar/?next=/organizador/eventos/<E1>/check-in/`; `POST` com status 302, `location: /contas/entrar/` e "sem mensagem";
@@ -123,31 +124,31 @@ Esperado:
 E2=$(novo_evento $D/a "Outro Evento de A" "2027-08-11T21:00" 5 "50,00"); guardar E2 "$E2"
 entrar $D/b org.b@catraca.test
 E3=$(novo_evento $D/b "Evento de B" "2027-08-12T21:00" 5 "80,00"); guardar E3 "$E3"; echo "$E2 $E3"
+printf '%s\n' "$E2" "$E3" | grep -E '^evt_[a-z0-9]{8}$' | sort -u | wc -l
 compra "$E1" 4000000000000001; C1=$(novo); guardar C1 "$C1"
-compra "$E1" 4000000000000003; C2=$(novo); guardar C2 "$C2"
 compra "$E1" 4000000000000002; C3=$(novo); guardar C3 "$C3"
 compra "$E1" 4000000000000001; C4=$(novo); guardar C4 "$C4"
 compra "$E1" 4000000000000001; C5=$(novo); guardar C5 "$C5"
 compra "$E2" 4000000000000001; C6=$(novo); guardar C6 "$C6"
 compra "$E3" 4000000000000001; C7=$(novo); guardar C7 "$C7"
-echo "$C1 $C2 $C3 $C4 $C5 $C6 $C7"
+echo "$C1 $C3 $C4 $C5 $C6 $C7"
+printf '%s\n' "$C1" "$C3" "$C4" "$C5" "$C6" "$C7" | grep -E '^[A-Z0-9]{8}$' | sort -u | wc -l
 sleep 5
 corpo $D/p /meus-ingressos/ > $D/mi-prep.html
-for c in $C1 $C2 $C3 $C4 $C5 $C6 $C7; do linha $D/mi-prep.html "$c" | grep -oE 'data-campo="(evento|status)">[^<]*<' | paste -sd ' ' -; done
+for c in $C1 $C3 $C4 $C5 $C6 $C7; do linha $D/mi-prep.html "$c" | grep -oE 'data-campo="(evento|status)">[^<]*<' | paste -sd ' ' -; done
 sql "select count(*) from dominio_ingresso where check_in_em is not null"
 ```
 
 Esperado:
-- login de B: status 302 e `location: /organizador/`; dois ids `evt_…`;
-- sete compras, cada uma com status 302 e `location: /meus-ingressos/`; sete códigos distintos de 8 caracteres de `[A-Z0-9]`;
-- sete linhas, nesta ordem (`C1` a `C7`):
+- login de B: status 302 e `location: /organizador/`; dois ids `evt_…`; o número `2` (com ou sem espaços à esquerda: dois ids distintos no formato `evt_` + 8 de `[a-z0-9]`);
+- seis compras, cada uma com status 302 e `location: /meus-ingressos/`; seis códigos; o número `6` (com ou sem espaços à esquerda: seis códigos distintos de 8 caracteres de `[A-Z0-9]`);
+- seis linhas, nesta ordem (`C1`, `C3`, `C4`, `C5`, `C6`, `C7`; o `C2`, pendente, é comprado no C-06):
   1. `data-campo="evento">Check-in Principal< data-campo="status">confirmado<`
-  2. `data-campo="evento">Check-in Principal< data-campo="status">pendente<` (final `0003`)
-  3. `data-campo="evento">Check-in Principal< data-campo="status">recusado<` (final `0002`)
+  2. `data-campo="evento">Check-in Principal< data-campo="status">recusado<` (final `0002`)
+  3. `data-campo="evento">Check-in Principal< data-campo="status">confirmado<`
   4. `data-campo="evento">Check-in Principal< data-campo="status">confirmado<`
-  5. `data-campo="evento">Check-in Principal< data-campo="status">confirmado<`
-  6. `data-campo="evento">Outro Evento de A< data-campo="status">confirmado<`
-  7. `data-campo="evento">Evento de B< data-campo="status">confirmado<`
+  5. `data-campo="evento">Outro Evento de A< data-campo="status">confirmado<`
+  6. `data-campo="evento">Evento de B< data-campo="status">confirmado<`
 - `0` (nenhum check-in ainda).
 
 ### C-04 — (F05-CA06, XF-08, R10 item 5) Confirmado sem check-in → "Entrada liberada"
@@ -157,10 +158,11 @@ ingresso "$C1"
 checkin $D/a "$E1" "$C1"
 ingresso "$C1"
 grep -c 'id="check-in-mensagem"' $D/a.html; grep -c 'id="evento-dados"' $D/a.html; grep -c 'id="form-check-in"' $D/a.html
+grep 'name="codigo"' $D/a.html | grep -c 'value='; grep -cF "$C1" $D/a.html
 corpo $D/a /organizador/eventos/$E1/ | grep -c 'id="check-in-mensagem"'
 ```
 
-Esperado: `confirmed|f`; → "Entrada liberada"; `confirmed|t` (`check_in_em` gravado, status continua `confirmed`); `1`; `1`; `1` (a resposta é a página de gestão inteira, com uma única mensagem e o formulário pronto para o próximo código); `0` (recarregar a gestão com `GET` não mostra mensagem).
+Esperado: `confirmed|f`; → "Entrada liberada"; `confirmed|t` (`check_in_em` gravado, status continua `confirmed`); `1`; `1`; `1` (a resposta é a página de gestão inteira, com uma única mensagem e o formulário pronto para o próximo código); `0` (o campo `codigo` volta vazio, sem atributo `value`); `0` (o código enviado não é ecoado na página); `0` (recarregar a gestão com `GET` não mostra mensagem).
 
 ### C-05 — (F05-CA05, R10 item 4) Já passou pelo check-in → "Ingresso já utilizado"
 
@@ -175,21 +177,30 @@ Esperado: → "Ingresso já utilizado"; "check_in_em mantido" (o horário do pri
 
 ### C-06 — (F05-CA04, XF-08, R10 item 3) Pendente (final `0003`) e recusado → "Ingresso não confirmado"
 
+O ingresso pendente é comprado aqui mesmo, segundos antes do check-in (a aprovação do final `0003` leva 32–38 s).
+
 ```bash
+compra "$E1" 4000000000000003; C2=$(novo); guardar C2 "$C2"
+echo "$C2" | grep -cE '^[A-Z0-9]{8}$'
+linha $D/mi.html "$C2" | grep -oE 'data-campo="(evento|status)">[^<]*<' | paste -sd ' ' -
+ingresso "$C2"
 checkin $D/a "$E1" "$C2"; ingresso "$C2"
 checkin $D/a "$E1" "$C3"; ingresso "$C3"
 ```
 
-Esperado: → "Ingresso não confirmado"; `pending|f`; → "Ingresso não confirmado"; `declined|f`.
+Esperado: compra com status 302 e `location: /meus-ingressos/`; `1`; `data-campo="evento">Check-in Principal< data-campo="status">pendente<` (o código como aparece em Meus ingressos); `pending|f`; → "Ingresso não confirmado"; `pending|f`; → "Ingresso não confirmado" (`C3`, recusado); `declined|f`.
 
 ### C-07 — (F05-CA01, R10 item 1) Código inexistente → "Ingresso inválido para este evento"
 
 ```bash
 for c in ZZZZZZZZ zzzzzzzz "" "${C4}A" "${C4:0:7}"; do checkin $D/a "$E1" "$c"; done
 ingresso "$C4"
+ER=$(postar $D/a /organizador/eventos/novo/ "nome=Rascunho" "inicio=2027-08-14T21:00" "local=Sala" "lotacao=5" "preco=10,00" | idde); guardar ER "$ER"; echo "$ER"
+sql "select status from dominio_evento where id_publico = '$ER'"
+checkin $D/a "$ER" ZZZZZZZZ; checkin $D/a "$ER" "$C4"
 ```
 
-Esperado: cinco vezes → "Ingresso inválido para este evento" (`ZZZZZZZZ`, o mesmo em minúsculas, vazio, um código válido com um caractere a mais e com um a menos); `confirmed|f` (nada mudou no ingresso cujo código foi usado de base).
+Esperado: cinco vezes → "Ingresso inválido para este evento" (`ZZZZZZZZ`, o mesmo em minúsculas, vazio, um código válido com um caractere a mais e com um a menos); `confirmed|f` (nada mudou no ingresso cujo código foi usado de base); um id `evt_…`; `rascunho`; no evento em rascunho (que não vende), duas vezes → "Ingresso inválido para este evento".
 
 ### C-08 — (F05-CA02, XF-08, R10 item 1) Código de outro evento, confirmado, do mesmo organizador e de outro → "Ingresso inválido para este evento"
 
@@ -249,19 +260,21 @@ Esperado: `confirmed|f`; exatamente uma linha de contagem, `10 200` (com espaço
 
 ```bash
 E4=$(novo_evento $D/a "Será Cancelado" "2027-08-13T21:00" 10 "100,00"); guardar E4 "$E4"; echo "$E4"
+echo "$E4" | grep -cE '^evt_[a-z0-9]{8}$'
 compra "$E4" 4000000000000001; K1=$(novo); guardar K1 "$K1"
 compra "$E4" 4000000000000001; K2=$(novo); guardar K2 "$K2"
 compra "$E4" 4000000000000001; K3=$(novo); guardar K3 "$K3"
 compra "$E4" 4000000000000002; K4=$(novo); guardar K4 "$K4"
-compra "$E4" 4000000000000003; K5=$(novo); guardar K5 "$K5"
 compra "$E4" 4000000000000003; K6=$(novo); guardar K6 "$K6"
 sleep 5
 checkin $D/a "$E4" "$K1"; checkin $D/a "$E4" "$K3"
+compra "$E4" 4000000000000003; K5=$(novo); guardar K5 "$K5"
+printf '%s\n' "$K1" "$K2" "$K3" "$K4" "$K5" "$K6" | grep -E '^[A-Z0-9]{8}$' | sort -u | wc -l
 # preparação de estado (o cancelamento é da F07):
 sql "update dominio_evento set status = 'cancelado' where id_publico = '$E4'"
 sql "update dominio_ingresso set status = 'refunded' where codigo = '$K3'"
 sql "update dominio_ingresso set status = 'cancelled' where codigo = '$K6'"
-for k in $K1 $K2 $K3 $K4 $K5 $K6; do ingresso "$k"; done
+sql "select codigo, status, check_in_em is not null from dominio_ingresso where codigo in ('$K1', '$K2', '$K3', '$K4', '$K5', '$K6') order by id"
 sql "select codigo, check_in_em from dominio_ingresso order by id" > $D/antes
 corpo $D/a /organizador/eventos/$E4/ > $D/g4.html
 grep -oE 'data-campo="status">[^<]*<' $D/g4.html; grep -c 'id="form-check-in"' $D/g4.html; grep -c 'name="codigo"' $D/g4.html
@@ -271,28 +284,29 @@ checkin $D/a "$E4" "$C5"
 checkin $D/a "$E4" ZZZZZZZZ
 sql "select codigo, check_in_em from dominio_ingresso order by id" > $D/depois
 cmp -s $D/antes $D/depois && echo "nada mudou"
-ingresso "$K5"
 ```
 
 Esperado:
-- um id `evt_…`; seis compras com status 302 e `location: /meus-ingressos/`;
+- um id `evt_…`; `1`; seis compras ao todo, cada uma com status 302 e `location: /meus-ingressos/` (K5, final `0003`, é a última, feita pouco antes do cancelamento);
 - antes do cancelamento: → "Entrada liberada" (`K1`) e → "Entrada liberada" (`K3`);
+- o número `6` (com ou sem espaços à esquerda: seis códigos distintos de 8 caracteres de `[A-Z0-9]`);
 - as três atualizações de preparação imprimem `UPDATE 1` cada;
-- seis linhas, nesta ordem: `confirmed|t` (K1), `confirmed|f` (K2), `refunded|t` (K3), `declined|f` (K4), `pending|f` (K5, final `0003`), `cancelled|f` (K6);
+- uma única consulta com seis linhas, nesta ordem (por id): `<K1>|confirmed|t`, `<K2>|confirmed|f`, `<K3>|refunded|t`, `<K4>|declined|f`, `<K6>|cancelled|f`, `<K5>|pending|f`;
 - a gestão do evento cancelado: `data-campo="status">Cancelado<`; `1`; `1` (o formulário de check-in continua);
 - seis vezes → "Evento cancelado" (K5 pendente, K1 confirmado com check-in, K2 confirmado sem check-in, K3 estornado com check-in, K4 recusado, K6 cancelado);
 - → "Ingresso inválido para este evento" (`C7`, confirmado do evento de B, sem check-in); → "Ingresso inválido para este evento" (`C5`, confirmado de outro evento de A, com check-in); → "Ingresso inválido para este evento" (`ZZZZZZZZ`);
-- "nada mudou" (nenhum `check_in_em` de nenhum ingresso mudou com esses nove envios);
-- `pending|f` (K5 ainda pendente: a mensagem veio do evento cancelado, não do status).
+- "nada mudou" (nenhum `check_in_em` de nenhum ingresso mudou com esses nove envios).
 
 ### C-13 — (F05-CA07) Teste de concorrência contra o Postgres
 
 ```bash
 ./scripts/gates.sh -v dominio/tests/test_checkin_concorrencia.py; echo "código: $?"
-grep -cE 'CHECK_INS_SIMULTANEOS = 10|RODADAS = 10|threading\.Barrier\(CHECK_INS_SIMULTANEOS\)|connection\.close\(\)' dominio/tests/test_checkin_concorrencia.py
+for p in 'CHECK_INS_SIMULTANEOS = 10' 'RODADAS = 10' 'threading.Barrier(CHECK_INS_SIMULTANEOS)' 'connection.close()'; do
+  grep -qF "$p" dominio/tests/test_checkin_concorrencia.py && echo "ok: $p"
+done
 ```
 
-Esperado: "código: 0" com `test_check_ins_simultaneos_liberam_uma_unica_vez PASSED` (10 threads liberadas juntas por uma barreira, cada uma com a sua conexão, fazem o check-in do mesmo código confirmado: exatamente 1 "Entrada liberada" e 9 "Ingresso já utilizado", repetido em 10 ingressos novos); `4` (as constantes, a barreira e o fechamento da conexão de cada thread estão no arquivo).
+Esperado: "código: 0" com `test_check_ins_simultaneos_liberam_uma_unica_vez PASSED` (10 threads liberadas juntas por uma barreira, cada uma com a sua conexão, fazem o check-in do mesmo código confirmado: exatamente 1 "Entrada liberada" e 9 "Ingresso já utilizado", repetido em 10 ingressos novos); quatro linhas, exatamente `ok: CHECK_INS_SIMULTANEOS = 10`, `ok: RODADAS = 10`, `ok: threading.Barrier(CHECK_INS_SIMULTANEOS)` e `ok: connection.close()`.
 
 ### C-14 — Testes automatizados da feature
 
@@ -300,7 +314,7 @@ Esperado: "código: 0" com `test_check_ins_simultaneos_liberam_uma_unica_vez PAS
 ./scripts/gates.sh -v dominio/tests/test_checkin.py web/tests/test_checkin.py web/tests/test_acesso.py; echo "código: $?"
 ```
 
-Esperado: "código: 0", nenhum "FAILED" nem "SKIPPED", e como PASSED (com ou sem sufixo `[...]`) pelo menos: `test_resultado_check_in_tem_as_cinco_mensagens_exatas_na_ordem`, `test_codigo_inexistente_e_invalido`, `test_codigo_de_outro_evento_e_invalido`, `test_codigo_de_outro_evento_em_evento_cancelado_e_invalido`, `test_evento_cancelado_vem_antes_do_status_e_do_check_in`, `test_ingresso_nao_confirmado`, `test_ingresso_ja_utilizado`, `test_entrada_liberada_grava_check_in_e_mantem_confirmado`, `test_codigo_normalizado`, `test_codigo_mal_formado_e_invalido`, `test_evento_de_outro_organizador_ou_inexistente_lanca_sem_efeito`, `test_check_in_trava_evento_e_depois_ingresso`, `test_resultados_rejeitados_nao_escrevem` (em `dominio/tests/test_checkin.py`); `test_gestao_do_dono_mostra_bloco_check_in`, `test_check_in_pela_tela_mostra_cada_mensagem`, `test_check_in_pela_tela_normaliza_o_codigo`, `test_check_in_de_outro_organizador_responde_404_sem_efeito`, `test_check_in_de_visitante_e_participante_e_barrado_sem_efeito`, `test_check_in_por_get_responde_405`, `test_evento_cancelado_mantem_o_campo_e_responde_evento_cancelado`, `test_resposta_do_check_in_e_a_gestao_inteira` (em `web/tests/test_checkin.py`); `test_rotas_do_organizador_barram_visitante_e_participante` (em `web/tests/test_acesso.py`, que percorre todas as rotas sob `/organizador/`, inclusive a de check-in).
+Esperado: "código: 0", nenhum "FAILED" nem "SKIPPED", e como PASSED (com ou sem sufixo `[...]`) pelo menos: `test_resultado_check_in_tem_as_cinco_mensagens_exatas_na_ordem`, `test_codigo_inexistente_e_invalido`, `test_codigo_de_outro_evento_e_invalido`, `test_codigo_de_outro_evento_em_evento_cancelado_e_invalido`, `test_evento_cancelado_vem_antes_do_status_e_do_check_in`, `test_ingresso_nao_confirmado` (os quatro status não confirmados, com e sem `check_in_em`, num evento publicado), `test_ingresso_ja_utilizado`, `test_entrada_liberada_grava_check_in_e_mantem_confirmado`, `test_codigo_normalizado`, `test_codigo_mal_formado_e_invalido`, `test_evento_em_rascunho_so_tem_codigos_invalidos`, `test_evento_de_outro_organizador_ou_inexistente_lanca_sem_efeito`, `test_check_in_trava_evento_e_depois_ingresso`, `test_resultados_rejeitados_nao_escrevem` (em `dominio/tests/test_checkin.py`); `test_gestao_do_dono_mostra_bloco_check_in`, `test_check_in_pela_tela_mostra_cada_mensagem`, `test_check_in_pela_tela_normaliza_o_codigo`, `test_check_in_de_outro_organizador_responde_404_sem_efeito`, `test_check_in_de_visitante_e_participante_e_barrado_sem_efeito`, `test_check_in_por_get_responde_405`, `test_evento_cancelado_mantem_o_campo_e_responde_evento_cancelado`, `test_resposta_do_check_in_e_a_gestao_inteira` (em `web/tests/test_checkin.py`); `test_rotas_do_organizador_barram_visitante_e_participante` (em `web/tests/test_acesso.py`, que percorre todas as rotas sob `/organizador/`, inclusive a de check-in).
 
 ### C-15 — Camadas e travas (regra 1 do AGENTS.md; F05-CA07)
 
