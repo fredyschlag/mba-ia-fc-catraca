@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titulo %}Criar conta — Catraca{% endblock %}
+{% block conteudo %}
+  <h2>Criar conta</h2>
+  <form id="form-cadastro" method="post" action="/contas/cadastro/" novalidate>
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% include "web/contas/_campo.html" with campo=form.nome %}
+    {% include "web/contas/_campo.html" with campo=form.email %}
+    {% include "web/contas/_campo.html" with campo=form.senha %}
+    <button type="submit">Criar conta</button>
+  </form>
+  <p><a href="/contas/entrar/{% if next %}?next={{ next|urlencode:'' }}{% endif %}">Já tenho conta</a></p>
+{% endblock %}

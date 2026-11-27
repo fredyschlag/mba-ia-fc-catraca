@@ -8,12 +8,17 @@
     body { font-family: system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 0 16px; }
     header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; }
     .mensagens li { list-style: none; padding: 8px; background: #f2f2f2; }
+    #usuario-logado { display: flex; gap: 12px; align-items: center; }
+    .form-sair { display: inline; margin: 0; }
+    .erro, .errorlist { color: #a00; }
   </style>
 </head>
 <body>
   <header>
     <h1><a href="/">Catraca</a></h1>
-    <nav id="usuario-logado">{% block usuario_logado %}{% endblock %}</nav>
+    <nav id="usuario-logado">
+      {% include "web/_usuario_logado.html" %}
+    </nav>
   </header>
   {% if messages %}
     <ul class="mensagens">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>

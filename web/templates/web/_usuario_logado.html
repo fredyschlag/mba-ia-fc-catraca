@@ -1,0 +1,16 @@
+{% if user.is_authenticated %}
+  <span class="usuario-nome">{{ user.nome }}</span>
+  {% if user.eh_participante %}
+    {# /meus-ingressos/ é registrada pela F03; até lá o link leva à página 404 genérica. #}
+    <a href="/meus-ingressos/">Meus ingressos</a>
+  {% elif user.eh_organizador %}
+    <a href="/organizador/">Área do organizador</a>
+  {% endif %}
+  <form method="post" action="/contas/sair/" class="form-sair">
+    {% csrf_token %}
+    <button type="submit">Sair</button>
+  </form>
+{% else %}
+  <a href="/contas/entrar/">Entrar</a>
+  <a href="/contas/cadastro/">Criar conta</a>
+{% endif %}
