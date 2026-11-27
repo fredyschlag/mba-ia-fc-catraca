@@ -1,0 +1,99 @@
+# Catraca — ambiente local completo (modo padrão = gateway simulado).
+# Sem `name:` fixo: o nome do projeto vem da pasta (ou de COMPOSE_PROJECT_NAME), então cada
+# worktree tem containers, rede e volume próprios.
+# Valores abaixo são SÓ de desenvolvimento; não há .env.
+# Conexões: max_connections=200 cobre web (4 workers × 8 threads = 32), gateway (1),
+# migrar (1) e gates (pytest + até 30 threads nos testes de concorrência), com folga.
+
+x-ambiente-app: &ambiente-app
+  DJANGO_SECRET_KEY: "dev-inseguro-catraca-nao-usar-em-producao"
+  DJANGO_DEBUG: "0"
+  DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,[::1]"
+  POSTGRES_HOST: db
+  POSTGRES_DB: catraca
+  POSTGRES_USER: catraca
+  POSTGRES_PASSWORD: catraca-dev
+  CATRACA_CHAVE_PARCEIRO: "chave-parceiro-dev"
+
+x-app: &app
+  build:
+    context: .
+    target: runtime
+  environment: *ambiente-app
+  init: true
+
+services:
+  db:
+    image: postgres:17.12
+    command: ["postgres", "-c", "max_connections=200"]
+    environment:
+      POSTGRES_DB: catraca
+      POSTGRES_USER: catraca
+      POSTGRES_PASSWORD: catraca-dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catraca -d catraca"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    # Nenhuma porta publicada no host.
+
+  migrar:
+    <<: *app
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    <<: *app
+    command:
+      - gunicorn
+      - catraca.wsgi:application
+      - --bind=0.0.0.0:8000
+      - --worker-class=gthread
+      - --workers=4
+      - --threads=8
+      - --timeout=30
+      - --access-logfile=-
+    ports:
+      - "${CATRACA_PORTA:-8000}:8000"
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/saude/', timeout=3).status == 200 else 1)"
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  gateway:
+    <<: *app
+    command: ["python", "manage.py", "gateway_worker"]
+    depends_on:
+      migrar:
+        condition: service_completed_successfully
+
+  gates:
+    build:
+      context: .
+      target: dev
+    profiles: ["gates"]
+    environment: *ambiente-app
+    init: true
+    volumes:
+      - .:/app
+    command: ["bash", "scripts/gates-container.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
