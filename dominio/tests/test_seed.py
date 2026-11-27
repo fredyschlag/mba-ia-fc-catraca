@@ -32,6 +32,32 @@ def test_seed_rodada_duas_vezes_nao_duplica_e_senhas_valem():
     _confere_contas()
 
 
+def test_seed_rodada_de_novo_preserva_o_hash_das_senhas():
+    call_command("seed")
+    hashes = dict(Usuario.objects.values_list("email", "password"))
+
+    call_command("seed")
+
+    assert dict(Usuario.objects.values_list("email", "password")) == hashes
+    _confere_contas()
+
+
+def test_seed_restaura_a_senha_de_desenvolvimento_trocada():
+    call_command("seed")
+    u = Usuario.objects.get(email="participante@catraca.test")
+    u.set_password("senha-trocada-1")
+    u.save()
+    hash_trocado = u.password
+    assert authenticate(username=u.email, password=SENHA_DEV) is None
+
+    call_command("seed")
+
+    u.refresh_from_db()
+    assert u.password != hash_trocado
+    assert authenticate(username=u.email, password="catraca123") == u
+    assert authenticate(username=u.email, password="senha-trocada-1") is None
+
+
 def test_seed_redefine_senha_e_papel_alterados():
     call_command("seed")
     u = Usuario.objects.get(email="org.a@catraca.test")

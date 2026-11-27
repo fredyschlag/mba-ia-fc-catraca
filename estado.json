@@ -13,7 +13,7 @@
     "pr": null
   },
   "features": [
-    {"id": "F01", "nome": "Contas e acesso", "wave": "W1", "status": "pendente", "branch": null, "pr": null, "relatorio": null},
+    {"id": "F01", "nome": "Contas e acesso", "wave": "W1", "status": "concluida", "branch": "feat/F01-contas-acesso", "pr": null, "relatorio": "docs/features/F01-contas-acesso/avaliacoes/2026-11-27T0927-48fb45c.md"},
     {"id": "F02", "nome": "Eventos e vitrine", "wave": "W2", "status": "pendente", "branch": null, "pr": null, "relatorio": null},
     {"id": "F03", "nome": "Compra, lotação e gateway", "wave": "W3", "status": "pendente", "branch": null, "pr": null, "relatorio": null},
     {"id": "F04", "nome": "API de parceiros", "wave": "W4", "status": "pendente", "branch": null, "pr": null, "relatorio": null},

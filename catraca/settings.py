@@ -68,6 +68,10 @@ DATABASES = {
 
 AUTH_USER_MODEL = "dominio.Usuario"
 
+# Contas e acesso (F01): login próprio em /contas/entrar/; falha de CSRF com a página 403.
+LOGIN_URL = "/contas/entrar/"
+CSRF_FAILURE_VIEW = "web.views.falha_csrf"
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
 ]
