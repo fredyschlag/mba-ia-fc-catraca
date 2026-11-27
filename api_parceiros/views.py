@@ -14,10 +14,15 @@ from django.views.decorators.csrf import csrf_exempt
 
 from api_parceiros.auth import exigir_chave_parceiro
 from api_parceiros.respostas import erro, responder
-from api_parceiros.serializadores import compra_para_api, evento_para_api
-from dominio.excecoes import EventoIndisponivel, IngressosEsgotados, ValidacaoError
+from api_parceiros.serializadores import compra_para_api, evento_para_api, ingresso_para_api
+from dominio.excecoes import (
+    EventoIndisponivel,
+    IngressoNaoEncontrado,
+    IngressosEsgotados,
+    ValidacaoError,
+)
 from dominio.models import Ingresso
-from dominio.servicos.compras import comprar_ingresso
+from dominio.servicos.compras import comprar_ingresso, consultar_ingresso
 from dominio.servicos.eventos import eventos_a_venda
 
 MSG_CORPO_INVALIDO = "Envie um objeto JSON com buyerEmail e cardNumber (textos)."
@@ -93,4 +98,9 @@ def comprar(request, evento_id):
 @exigir_chave_parceiro
 @so_metodo("GET")
 def ingresso(request, ticket_id):
-    return erro("not_implemented", 501)
+    """Consulta de um ingresso de qualquer canal (vitrine ou API)."""
+    try:
+        encontrado = consultar_ingresso(ticket_id)
+    except IngressoNaoEncontrado:
+        return erro("ticket_not_found", 404)
+    return responder(ingresso_para_api(encontrado))
