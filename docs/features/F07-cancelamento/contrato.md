@@ -56,11 +56,11 @@ comprar()   { curl -s -o /dev/null -b "$1" -c "$1" "$WEB/contas/entrar/"
               curl -s -o "$1.html" -D - -b "$1" -c "$1" \
                 --data-urlencode "csrfmiddlewaretoken=$(csrf "$1")" --data-urlencode "cartao=$3" \
                 "$WEB/eventos/$2/comprar/" | tr -d '\r' | grep -iE '^(HTTP/|location:)'; }
-# compra pela API: compra_api <evento> <cartão> → imprime "<status http> <corpo>"; o corpo fica em $D/b
-compra_api(){ curl -s -o "$D/b" -w '%{http_code}' -X POST -H "X-Api-Key: $KEY" -H "Content-Type: application/json" \
+# compra pela API: compra_api <evento> <cartão> → imprime "<status http> <corpo>"; o corpo fica em $D/resposta.json
+compra_api(){ curl -s -o "$D/resposta.json" -w '%{http_code}' -X POST -H "X-Api-Key: $KEY" -H "Content-Type: application/json" \
                 --data-binary "{\"buyerEmail\":\"parceiro@example.com\",\"cardNumber\":\"$2\"}" \
-                "$API/api/partner/events/$1/purchases"; echo " $(cat "$D/b")"; }
-campo()     { sed -nE "s/.*\"$1\":\"?([^\",}]*)\"?.*/\1/p" "$D/b"; }
+                "$API/api/partner/events/$1/purchases"; echo " $(cat "$D/resposta.json")"; }
+campo()     { sed -nE "s/.*\"$1\":\"?([^\",}]*)\"?.*/\1/p" "$D/resposta.json"; }
 bilhete()   { curl -s -H "X-Api-Key: $KEY" "$API/api/partner/tickets/$1"; echo; }
 # código do ingresso mais recente do evento
 ultimo()    { sql "select i.codigo from dominio_ingresso i join dominio_evento e on e.id = i.evento_id where e.id_publico = '$1' order by i.id desc limit 1"; }
