@@ -1,3 +1,1 @@
-{% comment %}Slot da F06 (painel). Recebe `evento` do contexto da gestão; a feature busca o que
-precisa com uma template tag própria, sem mexer na view de gestão.{% endcomment %}
-<section id="painel"></section>
+{% load painel %}<section id="painel">{% bloco_painel evento %}</section>
