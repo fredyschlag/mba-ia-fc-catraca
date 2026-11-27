@@ -38,7 +38,7 @@ Duas cópias na mesma pasta exigem também `COMPOSE_PROJECT_NAME=<outro-nome>` n
 2. **Gates verdes antes de dizer "pronto".** `./scripts/gates.sh` precisa sair com código 0. Mostre a saída.
 3. **Nunca leia, peça ou exiba `.env` nem segredos.** O projeto não usa `.env`: os valores de desenvolvimento ficam no `compose.yaml`.
 4. **Gateway sempre simulado.** Nenhuma chave de pagamento real, em lugar nenhum. O atraso só muda em testes, via `GATEWAY_FATOR_ATRASO`, que nunca aparece no `compose.yaml`.
-5. **Commit só com autorização do Fredy**, sem linha `Co-Authored-By`. Push também só com autorização; o PR é aberto pelo Fredy.
+5. **Commit só com autorização do Fredy**, sem linha `Co-Authored-By`. Push também só com autorização; o PR é aberto pelo Fredy, salvo numa rodada automática autorizada por ele (ver "Fluxo automático").
 6. **Relatório de avaliação nunca é editado depois de commitado.** Reavaliação gera arquivo novo.
 7. **O brief é a referência.** [docs/brief.md](docs/brief.md) não é editado; o [PRD](docs/prd.md) fixa features, Provides/Consumes, critérios e waves. Mudar um nome provido exige atualizar o PRD e os contratos afetados.
 8. **O modelo de usuário e a seed são da W0.** Não troque o `AUTH_USER_MODEL` nem reescreva a migration `dominio/0001`; mudanças no usuário entram em migrations novas.
@@ -59,9 +59,19 @@ Toda feature é feita na branch `feat/<ID>-<slug>` (ex.: `feat/F01-contas-acesso
 
 **Wave paralela (W4: F04 ∥ F05).** Cada feature fica na sua worktree, com a sua branch e a sua porta (`CATRACA_PORTA`, ver "Worktree em outra porta"), e entra na main pelo seu próprio PR.
 
+### Fluxo automático (quando o Fredy autoriza uma rodada sem acompanhamento)
+
+O fluxo acima continua valendo. Numa rodada automática, autorizada pelo Fredy por escrito e só para ela, mudam estes pontos:
+
+- **Paradas.** Os passos 4 e 7 não esperam o Fredy. A revisão de spec, plano e contrato do passo 4 é feita por um subagente novo, de contexto vazio, que recebe só os caminhos dos documentos e devolve a lista de lacunas sem editar nada; o que for recusado fica registrado, com o motivo, no corpo do commit da spec.
+- **Avaliação por subagente.** A avaliação (passo 7) é feita por um subagente novo, de contexto vazio, que não implementou a feature, com as mesmas regras da seção "Fluxo de avaliação": confere o sha e a árvore limpa, exercita só o contrato e só escreve o relatório novo. Cada reavaliação usa outro subagente novo.
+- **Commit, PR e merge.** A sessão de implementação commita cada etapa e faz push da branch da feature. Depois do relatório aprovado (commitado sem alteração, com o `estado.json` em `concluida`) e dos gates verdes no último commit da branch, ela abre o PR (`gh pr create`, base `main`) e faz o merge com merge commit (`gh pr merge <n> --merge`; nunca squash nem rebase). Continua proibido: push direto na main, force push, apagar branch remota, auto-merge e mudar configurações do repositório. O número do PR entra no `pr` da feature, no primeiro commit da feature seguinte.
+- **Wave paralela.** Cada feature tem a sua worktree (`../catraca-<ID>`, ex.: `git worktree add ../catraca-F04 -b feat/F04-api-parceiros main`), a sua branch e a sua porta (`CATRACA_PORTA=8001` para a F04, `8002` para a F05), e é implementada por um subagente próprio, ao mesmo tempo que a outra. Cada subagente só mexe na sua worktree. O primeiro PR entra na main normalmente; o segundo resolve o conflito com a main na própria worktree (`git merge origin/main`), roda os gates e os itens do contrato de novo e, se a resolução mudar código ou teste, passa por uma nova avaliação antes do merge. No fim, `./scripts/down.sh` com a porta de cada worktree e `git worktree remove`.
+- **Limites.** A rodada para, explicando o motivo, se a mesma feature reprovar três avaliações seguidas, se um conflito exigir mudar regra de negócio de uma feature já concluída, se for preciso segredo, chave real de pagamento, `.env`, Python no host, mudar o `Usuario`, a migration `dominio/0001` ou um nome provido pelo PRD, ou se algum comando for destrutivo fora deste projeto.
+
 ## Fluxo de avaliação (sessão de avaliação)
 
-- Sessão nova, de contexto vazio: quem implementou não avalia.
+- Sessão nova, de contexto vazio, ou subagente novo de contexto vazio (fluxo automático): quem implementou não avalia.
 - Lê o contrato da feature e exercita cada item no commit indicado, com o ambiente subido por `./scripts/up.sh`.
 - Só escreve o arquivo do relatório, novo, em `docs/features/<ID>-<slug>/avaliacoes/<AAAA-MM-DDTHHMM>-<sha7>.md`, seguindo [docs/modelos/relatorio-avaliacao.md](docs/modelos/relatorio-avaliacao.md). Não commita, não toca no `estado.json`, não corrige código, não edita contrato nem relatórios anteriores.
 - Quem commita o relatório é a sessão de implementação da feature (passo 8 acima).
