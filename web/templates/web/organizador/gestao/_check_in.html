@@ -1,3 +1,15 @@
-{% comment %}Slot da F05 (check-in). Recebe `evento` do contexto da gestão; a feature busca o que
-precisa com uma template tag própria, sem mexer na view de gestão.{% endcomment %}
-<section id="check-in"></section>
+{% comment %}Bloco de check-in (F05). Recebe `evento` do contexto da gestão e, só na resposta do
+POST /organizador/eventos/<id>/check-in/, `check_in_resultado` (dominio.servicos.checkin).
+O campo aparece em qualquer status do evento, inclusive cancelado (R10).{% endcomment %}
+<section id="check-in">
+  <h3>Check-in</h3>
+  <form id="form-check-in" method="post" action="/organizador/eventos/{{ evento.id_publico }}/check-in/">
+    {% csrf_token %}
+    <label for="campo-codigo">Código do ingresso</label>
+    <input id="campo-codigo" name="codigo" type="text" autocomplete="off" required>
+    <button type="submit">Fazer check-in</button>
+  </form>
+  {% if check_in_resultado %}
+    <p id="check-in-mensagem">{{ check_in_resultado.value }}</p>
+  {% endif %}
+</section>
