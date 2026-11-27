@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load catraca %}
+{% block titulo %}Gestão — {{ evento.nome }} — Catraca{% endblock %}
+{% block conteudo %}
+  <section id="evento-dados">
+    <h2 data-campo="nome">{{ evento.nome }}</h2>
+    <dl>
+      <dt>Início</dt><dd data-campo="inicio">{{ evento.inicio|date:"d/m/Y H:i" }}</dd>
+      <dt>Local</dt><dd data-campo="local">{{ evento.local }}</dd>
+      <dt>Lotação</dt><dd data-campo="lotacao">{{ evento.lotacao }}</dd>
+      <dt>Preço</dt><dd data-campo="preco">{{ evento.preco_centavos|reais }}</dd>
+      <dt>Status</dt><dd data-campo="status">{{ evento.get_status_display }}</dd>
+    </dl>
+  </section>
+  {% include "web/organizador/gestao/_acoes.html" %}
+  {% include "web/organizador/gestao/_cancelar.html" %}
+  {% include "web/organizador/gestao/_check_in.html" %}
+  {% include "web/organizador/gestao/_painel.html" %}
+  <p><a href="/organizador/">Voltar para Meus eventos</a></p>
+{% endblock %}

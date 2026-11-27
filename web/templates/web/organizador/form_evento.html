@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block titulo %}{% if evento %}Editar evento{% else %}Novo evento{% endif %} — Catraca{% endblock %}
+{% block conteudo %}
+  <h2>{% if evento %}Editar evento{% else %}Novo evento{% endif %}</h2>
+  {{ form.non_field_errors }}
+  <form id="form-evento" method="post" novalidate
+        action="{% if evento %}/organizador/eventos/{{ evento.id_publico }}/editar/{% else %}/organizador/eventos/novo/{% endif %}">
+    {% csrf_token %}
+    {% include "web/contas/_campo.html" with campo=form.nome %}
+    {% include "web/contas/_campo.html" with campo=form.inicio %}
+    {% include "web/contas/_campo.html" with campo=form.local %}
+    {% include "web/contas/_campo.html" with campo=form.lotacao %}
+    {% include "web/contas/_campo.html" with campo=form.preco %}
+    <button type="submit">{% if evento %}Salvar{% else %}Criar evento{% endif %}</button>
+  </form>
+  {% if evento %}<p><a href="/organizador/eventos/{{ evento.id_publico }}/">Voltar para a gestão</a></p>{% endif %}
+{% endblock %}

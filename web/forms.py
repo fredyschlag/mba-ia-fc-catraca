@@ -26,3 +26,25 @@ class EntrarForm(forms.Form):
         strip=False,
         widget=forms.PasswordInput(render_value=False),
     )
+
+
+class EventoForm(forms.Form):
+    """Campos do evento como texto; a validação e as mensagens ficam em dominio.servicos.eventos."""
+
+    nome = forms.CharField(label="Nome", required=False, strip=False)
+    inicio = forms.CharField(
+        label="Início",
+        required=False,
+        strip=False,
+        widget=forms.TextInput(attrs={"type": "datetime-local"}),
+    )
+    local = forms.CharField(label="Local", required=False, strip=False)
+    lotacao = forms.CharField(
+        label="Lotação", required=False, strip=False, widget=forms.NumberInput
+    )
+    preco = forms.CharField(
+        label="Preço (R$)",
+        required=False,
+        strip=False,
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "placeholder": "100,00"}),
+    )

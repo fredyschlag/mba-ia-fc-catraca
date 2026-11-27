@@ -1,0 +1,9 @@
+<section id="evento-acoes">
+  <a href="/organizador/eventos/{{ evento.id_publico }}/editar/">Editar</a>
+  {% if evento.status == "rascunho" %}
+    <form method="post" action="/organizador/eventos/{{ evento.id_publico }}/publicar/" class="form-inline">
+      {% csrf_token %}
+      <button type="submit">Publicar</button>
+    </form>
+  {% endif %}
+</section>

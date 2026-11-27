@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load catraca %}
+{% block conteudo %}
+  <section id="vitrine">
+    <h2>Eventos à venda</h2>
+    {% if eventos %}
+      <ul class="lista-eventos">
+        {% for evento in eventos %}
+          <li class="evento">
+            <a href="/eventos/{{ evento.id_publico }}/">{{ evento.nome }}</a>
+            — <span class="inicio">{{ evento.inicio|date:"d/m/Y H:i" }}</span>
+            — <span class="local">{{ evento.local }}</span>
+            — <span class="preco">{{ evento.preco_centavos|reais }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>Nenhum evento à venda no momento.</p>
+    {% endif %}
+  </section>
+{% endblock %}
