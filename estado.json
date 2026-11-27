@@ -18,7 +18,7 @@
     {"id": "F03", "nome": "Compra, lotação e gateway", "wave": "W3", "status": "concluida", "branch": "feat/F03-compra-lotacao-gateway", "pr": 4, "relatorio": "docs/features/F03-compra-lotacao-gateway/avaliacoes/2026-11-27T1428-006c083.md"},
     {"id": "F04", "nome": "API de parceiros", "wave": "W4", "status": "concluida", "branch": "feat/F04-api-parceiros", "pr": 6, "relatorio": "docs/features/F04-api-parceiros/avaliacoes/2026-11-27T1823-eb5b6a2.md"},
     {"id": "F05", "nome": "Check-in", "wave": "W4", "status": "concluida", "branch": "feat/F05-check-in", "pr": 5, "relatorio": "docs/features/F05-check-in/avaliacoes/2026-11-27T1456-ed3b8b7.md"},
-    {"id": "F06", "nome": "Painel", "wave": "W5", "status": "concluida", "branch": "feat/F06-painel", "pr": null, "relatorio": "docs/features/F06-painel/avaliacoes/2026-11-27T1835-940e8b0.md"},
-    {"id": "F07", "nome": "Cancelamento", "wave": "W6", "status": "pendente", "branch": null, "pr": null, "relatorio": null}
+    {"id": "F06", "nome": "Painel", "wave": "W5", "status": "concluida", "branch": "feat/F06-painel", "pr": 7, "relatorio": "docs/features/F06-painel/avaliacoes/2026-11-27T1835-940e8b0.md"},
+    {"id": "F07", "nome": "Cancelamento", "wave": "W6", "status": "concluida", "branch": "feat/F07-cancelamento", "pr": 8, "relatorio": "docs/features/F07-cancelamento/avaliacoes/2026-11-27T1856-3d8aff9.md"}
   ]
 }

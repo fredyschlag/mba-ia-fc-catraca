@@ -147,6 +147,20 @@ class Evento(models.Model):
     def __str__(self):
         return f"{self.nome} ({self.id_publico})"
 
+    @property
+    def pode_ser_editado(self):
+        """Cancelado é irreversível: não edita (R11)."""
+        return self.status != self.Status.CANCELADO
+
+    @property
+    def pode_ser_publicado(self):
+        return self.status == self.Status.RASCUNHO
+
+    @property
+    def pode_ser_cancelado(self):
+        """Só evento publicado é cancelado (R11)."""
+        return self.status == self.Status.PUBLICADO
+
 
 ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 

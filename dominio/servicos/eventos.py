@@ -13,7 +13,12 @@ from datetime import datetime
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from dominio.excecoes import EventoIndisponivel, EventoNaoEncontrado, ValidacaoError
+from dominio.excecoes import (
+    EventoCancelado,
+    EventoIndisponivel,
+    EventoNaoEncontrado,
+    ValidacaoError,
+)
 from dominio.models import Evento, gerar_id_evento
 from dominio.servicos.compras import validar_lotacao_contra_ocupadas
 
@@ -202,6 +207,8 @@ def _validar_edicao(evento: Evento, valores: dict, erros: dict[str, list[str]]) 
     Chamado com a linha do evento travada. F03: lotação ≥ vagas ocupadas (R03).
     F07: evento cancelado não pode ser alterado (R11).
     """
+    if evento.status == Evento.Status.CANCELADO:
+        raise EventoCancelado()
     if "lotacao" not in erros:
         validar_lotacao_contra_ocupadas(evento, valores.get("lotacao"), erros)
 
@@ -221,9 +228,11 @@ def editar_evento(organizador, evento_id, dados) -> Evento:
 
 
 def publicar_evento(organizador, evento_id) -> Evento:
-    """Rascunho → publicado (R02). Já publicado: devolve sem mudar nada."""
+    """Rascunho → publicado (R02). Já publicado: não muda nada. Cancelado: `EventoCancelado`."""
     with transaction.atomic():
         evento = _travar_evento_do_organizador(organizador, evento_id)
+        if evento.status == Evento.Status.CANCELADO:
+            raise EventoCancelado()
         if evento.status == Evento.Status.RASCUNHO:
             evento.status = Evento.Status.PUBLICADO
             evento.save(update_fields=["status"])
@@ -257,3 +266,11 @@ def evento_a_venda(evento_id) -> Evento:
         return eventos_a_venda().get(id_publico=evento_id)
     except Evento.DoesNotExist as erro:
         raise EventoIndisponivel(evento_id) from erro
+
+
+def garantir_editavel(organizador, evento_id) -> Evento:
+    """O evento do `organizador`, se puder ser editado; cancelado → `EventoCancelado` (R11)."""
+    evento = evento_do_organizador(organizador, evento_id)
+    if not evento.pode_ser_editado:
+        raise EventoCancelado()
+    return evento

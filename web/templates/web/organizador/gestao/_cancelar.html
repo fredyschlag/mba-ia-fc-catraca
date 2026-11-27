@@ -1,3 +1,11 @@
-{% comment %}Slot da F07 (cancelamento). Recebe `evento` do contexto da gestão; a feature busca o que
-precisa com uma template tag própria, sem mexer na view de gestão.{% endcomment %}
-<section id="evento-cancelar"></section>
+<section id="evento-cancelar">
+  {% if evento.pode_ser_cancelado %}
+    <form id="form-cancelar" method="post" action="/organizador/eventos/{{ evento.id_publico }}/cancelar/"
+          onsubmit="return confirm('Cancelar este evento? Esta ação não pode ser desfeita.')">
+      {% csrf_token %}
+      <button type="submit">Cancelar evento</button>
+    </form>
+  {% elif not evento.pode_ser_editado %}
+    <p>Este evento foi cancelado.</p>
+  {% endif %}
+</section>
