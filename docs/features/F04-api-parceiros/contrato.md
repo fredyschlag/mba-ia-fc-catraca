@@ -12,9 +12,9 @@
 - Commit avaliado: o sha informado no pedido de avaliação (branch `feat/F04-api-parceiros`).
 - Ferramentas no host: Docker, Git, `curl`, **bash** e os utilitários `awk`, `sed`, `grep`, `cut`, `sort`, `uniq`, `xargs`, `seq`, `tr`, `head`, `wc`, `mktemp`, `date` (`date +%s`) e `sleep`. Sem `jq` e sem Python no host. Navegador é opcional.
 - Contas da seed (README, "Credenciais"): `org.a@catraca.test` e `participante@catraca.test`, com a senha `catraca123`. Chave de parceiro (README, "Credenciais"): `chave-parceiro-dev`.
-- **Tempo.** O C-08 espera os cartões lentos (cerca de 45 s) e o C-11 faz 7 rajadas. A execução completa leva uns 3 minutos, sem contar os gates. Os itens que conferem "pendente" logo depois de uma compra usam a resposta ou uma consulta feita imediatamente depois dela, e os prazos do gateway ("em até 5 s", "entre 30 e 40 s") são medidos no banco pela diferença entre a criação do ingresso e o processamento da cobrança.
+- **Tempo.** O C-08 espera os cartões lentos (cerca de 45 s) e o C-11 faz 8 rajadas (2 manuais e 6 pelo script: 5 rodadas mais 1 com a chave errada). A execução completa leva uns 3 minutos, sem contar os gates. Os itens que conferem "pendente" logo depois de uma compra usam a resposta ou uma consulta feita imediatamente depois dela, e os prazos do gateway ("em até 5 s", "entre 30 e 40 s") são medidos no banco pela diferença entre a criação do ingresso e o processamento da cobrança.
 - **Simulações.** Cancelamento (F07) e check-in (F05) ainda não existem nesta branch; o C-06 e o C-09 simulam os dois com um `update` direto no banco, marcado com comentário.
-- **Porta.** Vem de `CATRACA_PORTA` (padrão 8000) e é a mesma na subida, nos itens, no `scripts/rajada-api.sh` e na descida.
+- **Porta.** Antes de tudo, o avaliador exporta `CATRACA_PORTA` com a porta informada no pedido de avaliação (na worktree da F04, `export CATRACA_PORTA=8001`; na main, a padrão 8000). Todos os comandos leem `PORTA=${CATRACA_PORTA:-8000}`, e a mesma porta vale na subida, nos itens, no `scripts/rajada-api.sh` e na descida.
 - **Banco zerado**, na raiz:
 
 ```bash
@@ -34,6 +34,7 @@ cat > "$D/f.sh" <<'FIM'
 PORTA=${CATRACA_PORTA:-8000}
 D=/tmp/catraca-F04-$PORTA
 export WEB=http://localhost:$PORTA
+export API=$WEB
 KEY=chave-parceiro-dev
 sql()       { docker compose exec -T db psql -U catraca -d catraca -tAc "$1"; }
 ingressos() { sql "select count(*) from dominio_ingresso"; }
@@ -127,13 +128,14 @@ for chave in - errada chave-parceiro-dev2; do
   req "$chave" GET /api/partner/events
   req "$chave" POST /api/partner/events/$E1/purchases '{"buyerEmail":"ana@example.com","cardNumber":"4000000000000001"}'
   req "$chave" POST /api/partner/events/evt_zzzzzzzz/purchases 'isto não é json'
+  req "$chave" POST /api/partner/events/evt_zzzzzzzz/purchases '{"buyerEmail":"ana@example.com","cardNumber":"4000000000000001"}'
   req "$chave" GET /api/partner/tickets/tkt_naoexiste
 done
 cabecalhos
 echo "$(ingressos)/$(cobrancas)"
 ```
 
-Esperado: exatamente 12 linhas, todas `401 {"error":"unauthorized"}` (sem cabeçalho, com uma chave qualquer e com a chave certa seguida de um caractere; na listagem, na compra válida de um evento à venda, na compra com corpo inválido de evento inexistente e na consulta de ingresso inexistente); uma única linha `Content-Type: application/json`; `0/0` (nada foi criado).
+Esperado: exatamente 15 linhas, todas `401 {"error":"unauthorized"}` (sem cabeçalho, com uma chave qualquer e com a chave certa seguida de um caractere; na listagem, na compra válida de um evento à venda, na compra com corpo inválido de evento inexistente, na compra com corpo válido de evento inexistente e na consulta de ingresso inexistente); uma única linha `Content-Type: application/json`; `0/0` (nada foi criado).
 
 ### C-04 — (F04-CA02, F04-CA07, XF-06, R06, R08) Compra pela API com final 0001: pendente na hora, confirmada em até 5 s
 
@@ -191,16 +193,27 @@ Esperado: o id `<E2>`; `1/1`; exatamente 13 linhas `422 {"error":"invalid_reques
 E3=$(novo_evento $D/a "Cancelado API" "2027-06-17T21:00" 1 "30,00"); guardar E3 "$E3"; echo "$E3"
 api POST /api/partner/events/$E3/purchases '{"buyerEmail":"bia@example.com","cardNumber":"4000000000000001"}' | cut -c1-3
 api POST /api/partner/events/$E3/purchases '{"buyerEmail":"bia@example.com","cardNumber":"4000000000000001"}'
-sql "update dominio_evento set status = 'cancelado' where id_publico = '$E3'"   # simula o cancelamento (F07)
+api POST /api/partner/events/$E3/purchases '{"buyerEmail":"ana@example.com","cardNumber":"123"}'
+req - POST /api/partner/events/$E3/purchases '{"buyerEmail":"bia@example.com","cardNumber":"4000000000000001"}'
 echo "$(ingressos)/$(cobrancas)"
+sql "update dominio_evento set status = 'cancelado' where id_publico = '$E3'"   # simula o cancelamento (F07)
 for e in evt_zzzzzzzz "$E2" "$E3"; do
   api POST /api/partner/events/$e/purchases '{"buyerEmail":"bia@example.com","cardNumber":"4000000000000001"}'
 done
+api POST /api/partner/events/$E3/purchases '{"buyerEmail":"ana@example.com","cardNumber":"123"}'
 echo "$(ingressos)/$(cobrancas)"
 api GET /api/partner/events | grep -oE '"id":"evt_[a-z0-9]{8}"'
 ```
 
-Esperado: o id `<E3>`; `202`; `409 {"error":"sold_out"}` (lotado enquanto publicado); `UPDATE 1`; `2/2`; exatamente 3 linhas `404 {"error":"event_not_available"}` (inexistente, rascunho e cancelado lotado: 404, não 409); `2/2` (nada foi criado); uma única linha, `"id":"<E1>"` (rascunho e cancelado ficam fora da listagem).
+Esperado:
+- o id `<E3>`; `202`;
+- lotado enquanto publicado: `409 {"error":"sold_out"}`; com cartão `123`, `422 {"error":"invalid_request"}` (422 antes de 409); sem chave e com corpo válido, `401 {"error":"unauthorized"}`;
+- `2/2` (só a primeira compra criou algo);
+- `UPDATE 1`;
+- exatamente 3 linhas `404 {"error":"event_not_available"}` (inexistente, rascunho e cancelado lotado: 404, não 409);
+- no cancelado, com cartão `123`: `422 {"error":"invalid_request"}` (422 antes de 404);
+- `2/2` (nada foi criado);
+- uma única linha, `"id":"<E1>"` (rascunho e cancelado ficam fora da listagem).
 
 ### C-07 — (F04-CA06, F04-CA07, XF-06, R07) API e vitrine dividem a lotação; ingresso da vitrine consultável na API
 
@@ -213,6 +226,8 @@ api POST /api/partner/events/$E4/purchases '{"buyerEmail":"caio@example.com","ca
 corpo $D/p /eventos/$E4/ > $D/e4.html
 grep -oE 'data-campo="vagas-disponiveis">[0-9]+<' $D/e4.html; grep -cF '<p id="esgotado">Ingressos esgotados</p>' $D/e4.html; grep -c 'id="form-compra"' $D/e4.html
 api POST /api/partner/events/$E4/purchases '{"buyerEmail":"caio@example.com","cardNumber":"4000000000000001"}'
+api POST /api/partner/events/$E4/purchases '{"buyerEmail":"caio@example.com","cardNumber":"123"}'
+req - POST /api/partner/events/$E4/purchases '{"buyerEmail":"caio@example.com","cardNumber":"4000000000000001"}'
 comprar $D/p "$E5" 4000000000000001
 corpo $D/p /meus-ingressos/ > $D/mi.html
 TV=$(grep -oE 'data-ingresso="tkt_[a-z0-9]{8}"' $D/mi.html | head -n 1 | cut -d'"' -f2); guardar TV "$TV"
@@ -228,13 +243,13 @@ Esperado:
 - os dois ids; login do participante: status 302 e `location: /`; `data-campo="vagas-disponiveis">1<`;
 - `202` (a API ocupou a última vaga do E4);
 - na vitrine do E4: `data-campo="vagas-disponiveis">0<`; `1` ("Ingressos esgotados" no lugar da compra); `0` (sem formulário);
-- `409 {"error":"sold_out"}`;
+- E4 lotado: `409 {"error":"sold_out"}`; com cartão `123`, `422 {"error":"invalid_request"}` (422 antes de 409); sem chave e com corpo válido, `401 {"error":"unauthorized"}`;
 - compra na vitrine do E5: status 302, `location: /meus-ingressos/` e uma linha `tempo=…`;
 - o id `<TV>` (`tkt_…`) e o código `<KV>` mostrados em Meus ingressos;
 - exatamente `{"id":"<E5>","name":"Última Vaga Vitrine","startsAt":"2027-06-18T22:00:00-03:00","priceCents":4000,"availableSeats":0}`;
 - `409 {"error":"sold_out"}` (a vitrine ocupou a última vaga do E5);
 - depois dos 5 s: exatamente `200 {"ticketId":"<TV>","code":"<KV>","eventId":"<E5>","status":"confirmed","checkedIn":false}` (o mesmo código de Meus ingressos);
-- `2` (um ingresso em cada evento; as recusas 409 não criaram nada).
+- `2` (um ingresso em cada evento; as respostas 409, 422 e 401 não criaram nada).
 
 ### C-08 — (XF-06, F04-CA07, F04-CA06, R05, R08) Cartões lentos pela API: 0004 pendente aos 30 s ocupando a vaga, recusado antes de 45 s devolvendo a vaga
 
@@ -242,11 +257,12 @@ Esperado:
 E6=$(novo_evento $D/a "Lento API Recusado" "2027-06-19T21:00" 1 "20,00"); guardar E6 "$E6"
 E7=$(novo_evento $D/a "Lento API Aprovado" "2027-06-19T22:00" 1 "20,00"); guardar E7 "$E7"; echo "$E6 $E7"
 T0=$(date +%s)
-api POST /api/partner/events/$E6/purchases '{"buyerEmail":"duda@example.com","cardNumber":"4000000000000004"}' | cut -c1-3; T4=$(campo ticketId); guardar T4 "$T4"
-api POST /api/partner/events/$E7/purchases '{"buyerEmail":"duda@example.com","cardNumber":"4000000000000003"}' | cut -c1-3; T3=$(campo ticketId); guardar T3 "$T3"
+api POST /api/partner/events/$E6/purchases '{"buyerEmail":"duda@example.com","cardNumber":"4000000000000004"}' | cut -c1-3; T4=$(campo ticketId); K4=$(campo code); guardar T4 "$T4"; guardar K4 "$K4"
+api POST /api/partner/events/$E7/purchases '{"buyerEmail":"duda@example.com","cardNumber":"4000000000000003"}' | cut -c1-3; T3=$(campo ticketId); K3=$(campo code); guardar T3 "$T3"; guardar K3 "$K3"
+echo "$T4 $K4 $T3 $K3"
 assentos "$E6"; assentos "$E7"
 api POST /api/partner/events/$E6/purchases '{"buyerEmail":"duda@example.com","cardNumber":"4000000000000001"}'
-sleep $(( T0 + 31 - $(date +%s) ))
+sleep $(( T0 + 30 - $(date +%s) ))
 situacao "$T4"; situacao "$T3"; assentos "$E6"
 sleep $(( T0 + 45 - $(date +%s) ))
 api GET /api/partner/tickets/$T4
@@ -256,10 +272,10 @@ prazo "$T4" "between interval '30 seconds' and interval '40 seconds'"; prazo "$T
 ```
 
 Esperado:
-- os dois ids; `202`; `202`;
+- os dois ids; `202`; `202`; os ids e códigos `<T4> <K4> <T3> <K3>`;
 - logo depois: `"availableSeats":0` e `"availableSeats":0` (cada pendente ocupa a única vaga); `409 {"error":"sold_out"}`;
-- aos 31 s: `"status":"pending"`, `"status":"pending"` e `"availableSeats":0`;
-- aos 45 s: exatamente `200 {"ticketId":"<T4>","code":"…","eventId":"<E6>","status":"declined","checkedIn":false}` e `200 {"ticketId":"<T3>","code":"…","eventId":"<E7>","status":"confirmed","checkedIn":false}` (com os códigos de 8 caracteres de cada um);
+- aos 30 s (o lento mais rápido responde aos 32 s): `"status":"pending"`, `"status":"pending"` e `"availableSeats":0`;
+- aos 45 s: exatamente `200 {"ticketId":"<T4>","code":"<K4>","eventId":"<E6>","status":"declined","checkedIn":false}` e `200 {"ticketId":"<T3>","code":"<K3>","eventId":"<E7>","status":"confirmed","checkedIn":false}`;
 - `"availableSeats":1` (a recusa devolveu a vaga do E6) e `"availableSeats":0` (E7 confirmado continua ocupando);
 - `declined|t` e `confirmed|t` (responderam entre 30 e 40 s depois da compra).
 
@@ -290,7 +306,7 @@ Esperado: `404 {"error":"ticket_not_found"}`; `404 {"error":"ticket_not_found"}`
 ```bash
 for rodada in 1 2; do
   E=$(novo_evento $D/a "Rajada API $rodada" "2027-07-0${rodada}T20:00" 5 "10,00"); echo "$E"
-  seq 30 | xargs -P 30 -I{} curl -s -o /dev/null -w "%{http_code}\n" -X POST -H "X-Api-Key: $KEY" -H "Content-Type: application/json" -d '{"buyerEmail":"rajada{}@example.com","cardNumber":"4000000000000001"}' "$WEB/api/partner/events/$E/purchases" | sort | uniq -c
+  seq 30 | xargs -P 30 -I{} curl -s -o /dev/null -w "%{http_code}\n" -X POST -H "X-Api-Key: $KEY" -H "Content-Type: application/json" -d '{"buyerEmail":"rajada{}@example.com","cardNumber":"4000000000000001"}' "$API/api/partner/events/$E/purchases" | sort | uniq -c
   sql "select count(*), count(*) filter (where i.status in ('pending', 'confirmed')), e.lotacao from dominio_ingresso i join dominio_evento e on e.id = i.evento_id where e.id_publico = '$E' group by e.lotacao"
 done
 CATRACA_PORTA=$PORTA ./scripts/rajada-api.sh; echo "código: $?"
@@ -307,7 +323,10 @@ Esperado:
 ```bash
 grep -rnE "objects\.(create|update|filter\(.*\)\.update)|\.save\(" api_parceiros/ | grep -v '^api_parceiros/tests/' | wc -l
 grep -ohE "comprar_ingresso|consultar_ingresso|eventos_a_venda|vagas_disponiveis" api_parceiros/views.py api_parceiros/serializadores.py | sort -u
-grep -c "compare_digest" api_parceiros/auth.py
+grep -cF "hmac.compare_digest(" api_parceiros/auth.py
+for a in views serializadores auth; do grep -c "objects\." api_parceiros/$a.py; done
+grep -c "^def exigir_chave_parceiro" api_parceiros/auth.py
+grep -cE "^def (evento_para_api|ingresso_para_api)\(" api_parceiros/serializadores.py
 ```
 
 Esperado: `0` (nenhuma gravação direta fora dos testes; com ou sem espaços à esquerda); exatamente 4 linhas: `comprar_ingresso`, `consultar_ingresso`, `eventos_a_venda`, `vagas_disponiveis`; `1` (comparação da chave em tempo constante).

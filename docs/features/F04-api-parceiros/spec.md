@@ -27,7 +27,7 @@ Cada view é, de fora para dentro: `csrf_exempt` → `exigir_chave_parceiro` →
 
 ## 3. Autenticação — `api_parceiros/auth.py`
 
-`exigir_chave_parceiro(view)`: decorador que lê `request.headers.get("X-Api-Key")` e compara com `settings.CATRACA_CHAVE_PARCEIRO` usando `hmac.compare_digest` sobre os bytes UTF-8 (tempo constante). Responde 401 `{"error":"unauthorized"}` quando:
+`exigir_chave_parceiro(view)`: decorador que lê `request.headers.get("X-Api-Key")` e compara com `settings.CATRACA_CHAVE_PARCEIRO` com `hmac.compare_digest(` sobre os bytes UTF-8 (tempo constante; é a única comparação da chave, numa única linha de `auth.py`). Responde 401 `{"error":"unauthorized"}` quando:
 
 - o cabeçalho falta ou está vazio;
 - a chave não bate;
