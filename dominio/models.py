@@ -1,7 +1,7 @@
 """Modelos do domínio.
 
-A W0 entrega o usuário (AUTH_USER_MODEL na migration 0001); a F02, o Evento. Ingresso e
-CobrancaGateway chegam na F03, conforme docs/prd.md.
+A W0 entrega o usuário (AUTH_USER_MODEL na migration 0001); a F02, o Evento; a F03, o
+Ingresso e a CobrancaGateway, conforme docs/prd.md.
 """
 
 import secrets
@@ -146,3 +146,125 @@ class Evento(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.id_publico})"
+
+
+ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def gerar_id_ingresso() -> str:
+    return gerar_id_publico("tkt")
+
+
+def gerar_codigo_ingresso() -> str:
+    """8 caracteres maiúsculos, sem I, O, 0 e 1 (fáceis de confundir no check-in)."""
+    return "".join(secrets.choice(ALFABETO_CODIGO) for _ in range(8))
+
+
+class Ingresso(models.Model):
+    """Um ingresso de um evento, comprado na vitrine ou pela API (F03).
+
+    O status é o valor da API (pending, confirmed…); o rótulo é o da interface (pendente…).
+    Check-in não é status: é `check_in_em`, preenchido só pela F05.
+    """
+
+    class Status(models.TextChoices):
+        PENDENTE = "pending", "pendente"
+        CONFIRMADO = "confirmed", "confirmado"
+        RECUSADO = "declined", "recusado"
+        CANCELADO = "cancelled", "cancelado"
+        ESTORNADO = "refunded", "estornado"
+
+    class Canal(models.TextChoices):
+        VITRINE = "vitrine", "vitrine"
+        API = "api", "api"
+
+    id_publico = models.CharField(
+        "id público", max_length=12, unique=True, default=gerar_id_ingresso, editable=False
+    )
+    codigo = models.CharField("código", max_length=8, unique=True, default=gerar_codigo_ingresso)
+    evento = models.ForeignKey(
+        Evento, on_delete=models.PROTECT, related_name="ingressos", verbose_name="evento"
+    )
+    comprador = models.ForeignKey(
+        Usuario,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="ingressos",
+        verbose_name="comprador",
+    )
+    email_comprador = models.EmailField("e-mail do comprador", max_length=254)
+    canal = models.CharField("canal", max_length=10, choices=Canal.choices)
+    status = models.CharField(
+        "status", max_length=10, choices=Status.choices, default=Status.PENDENTE
+    )
+    valor_centavos = models.PositiveIntegerField("valor pago em centavos")
+    cartao_final = models.CharField("final do cartão", max_length=4)
+    check_in_em = models.DateTimeField("check-in em", null=True, blank=True)
+    criado_em = models.DateTimeField("criado em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "ingresso"
+        verbose_name_plural = "ingressos"
+        ordering = ["id"]
+        indexes = [models.Index(fields=["evento", "status"], name="ingresso_evento_status")]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=["pending", "confirmed", "declined", "cancelled", "refunded"]
+                ),
+                name="ingresso_status_valido",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(canal__in=["vitrine", "api"]), name="ingresso_canal_valido"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(valor_centavos__gt=0), name="ingresso_valor_positivo"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(codigo__regex=r"^[A-Z0-9]{8}$"), name="ingresso_codigo_formato"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(cartao_final__regex=r"^[0-9]{4}$"),
+                name="ingresso_cartao_final_4_digitos",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo} ({self.id_publico}, {self.status})"
+
+
+class CobrancaGateway(models.Model):
+    """Pedido ao gateway simulado: resultado sorteado na compra e quando a resposta "chega"."""
+
+    class Resultado(models.TextChoices):
+        APROVADO = "aprovado", "aprovado"
+        RECUSADO = "recusado", "recusado"
+
+    ingresso = models.OneToOneField(
+        Ingresso, on_delete=models.CASCADE, related_name="cobranca", verbose_name="ingresso"
+    )
+    resultado = models.CharField("resultado", max_length=10, choices=Resultado.choices)
+    responder_em = models.DateTimeField("responder em")
+    processada_em = models.DateTimeField("processada em", null=True, blank=True)
+    criada_em = models.DateTimeField("criada em", default=timezone.now)
+
+    class Meta:
+        verbose_name = "cobrança do gateway"
+        verbose_name_plural = "cobranças do gateway"
+        indexes = [
+            models.Index(
+                fields=["responder_em"],
+                condition=models.Q(processada_em__isnull=True),
+                name="cobranca_a_processar",
+            )
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(resultado__in=["aprovado", "recusado"]),
+                name="cobranca_resultado_valido",
+            )
+        ]
+
+    def __str__(self):
+        return f"cobrança de {self.ingresso_id}: {self.resultado}"

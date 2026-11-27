@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from dominio.excecoes import EventoIndisponivel, EventoNaoEncontrado, ValidacaoError
 from dominio.models import Evento, gerar_id_evento
+from dominio.servicos.compras import validar_lotacao_contra_ocupadas
 
 NOME_TAMANHO_MAXIMO = 150
 LOCAL_TAMANHO_MAXIMO = 200
@@ -201,6 +202,8 @@ def _validar_edicao(evento: Evento, valores: dict, erros: dict[str, list[str]]) 
     Chamado com a linha do evento travada. F03: lotação ≥ vagas ocupadas (R03).
     F07: evento cancelado não pode ser alterado (R11).
     """
+    if "lotacao" not in erros:
+        validar_lotacao_contra_ocupadas(evento, valores.get("lotacao"), erros)
 
 
 def editar_evento(organizador, evento_id, dados) -> Evento:
