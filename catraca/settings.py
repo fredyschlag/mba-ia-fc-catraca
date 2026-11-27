@@ -93,3 +93,7 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "simples"}},
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+# Gateway simulado (F03). Multiplica o atraso sorteado; vale 1 no modo padrão. Só os testes
+# o mudam: a variável GATEWAY_FATOR_ATRASO nunca aparece no compose.yaml.
+GATEWAY_FATOR_ATRASO = float(os.environ.get("GATEWAY_FATOR_ATRASO", "1"))
